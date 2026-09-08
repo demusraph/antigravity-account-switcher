@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Runtime files & session caches
+*.log
+*.pid
+*.tmp
+accounts/
+profiles/
+active_email.txt
+active_profile.txt
+autopilot.log
+app_crash.log
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Build & Release Artifacts
+build/
+dist/
+*.spec
