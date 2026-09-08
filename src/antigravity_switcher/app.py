@@ -65,7 +65,7 @@ except ImportError:
     import mcp_supervisor
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QTimer, QUrl, QSize, QPoint
+from PyQt5.QtCore import Qt, QTimer, QUrl, QSize, QPoint, QPropertyAnimation, QEasingCurve, QRect
 from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import (
@@ -603,9 +603,94 @@ HTML_INTERFACE = """<!DOCTYPE html>
       background-color: #E81123 !important;
       color: #FFFFFF !important;
     }
+
+    /* React Bits Motion & Polish Layer */
+    .shiny-text {
+      background: linear-gradient(120deg, rgba(255,255,255,0.7) 25%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.7) 75%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 5s linear infinite;
+    }
+    @keyframes shine {
+      0% { background-position: 150% }
+      100% { background-position: -150% }
+    }
+
+    .spotlight-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .spotlight-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        420px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+        rgba(255, 255, 255, 0.04),
+        transparent 65%
+      );
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 1;
+    }
+    .spotlight-card:hover::before {
+      opacity: 1;
+    }
+
+    .border-glow-active {
+      position: relative;
+      animation: pulseGlow 3s ease-in-out infinite alternate;
+    }
+    @keyframes pulseGlow {
+      0% {
+        box-shadow: 0 0 15px -2px rgba(16, 185, 129, 0.08), inset 0 0 8px -2px rgba(16, 185, 129, 0.04);
+      }
+      100% {
+        box-shadow: 0 0 25px 0px rgba(16, 185, 129, 0.18), inset 0 0 12px 0px rgba(16, 185, 129, 0.08);
+      }
+    }
+
+    .btn-spring {
+      transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+    }
+    .btn-spring:active {
+      transform: scale(0.93) !important;
+    }
+
+    .tab-animated-enter {
+      animation: tabSlideEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes tabSlideEnter {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .icon-spin-enter {
+      animation: iconSpin 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes iconSpin {
+      from {
+        transform: rotate(-90deg) scale(0.85);
+        opacity: 0;
+      }
+      to {
+        transform: rotate(0) scale(1);
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 <body class="font-sans antialiased overflow-hidden flex flex-col h-screen select-none bg-canvas text-[#CCCCCC]">
+  <!-- ClickSpark 2D Canvas Layer (React Bits) -->
+  <canvas id="click-spark-canvas" class="pointer-events-none fixed inset-0 z-[999999] w-full h-full"></canvas>
 
   <!-- Antigravity 2.0 1:1 Seamless Obsidian Top Bar with Clear Hierarchy -->
   <div class="h-[36px] bg-[#161616] border-b border-[#222222] flex items-center justify-between shrink-0 select-none text-xs z-50">
@@ -616,7 +701,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       
       <!-- Prominent Brand Hierarchy -->
       <div class="flex items-center gap-1.5 mr-3 select-none">
-        <span class="text-[13.5px] font-bold text-white tracking-tight">Antigravity</span>
+        <span class="text-[13.5px] font-bold text-white tracking-tight shiny-text">Antigravity</span>
         <span class="text-[13.5px] font-medium text-[#A3A3A3] tracking-tight">Control Center</span>
       </div>
 
@@ -721,7 +806,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       
       <!-- Quick Recommendation Button -->
       <div id="quick-rec-box" class="hidden pl-2 border-l border-hairline/60">
-        <button id="btn-quick-rec" onclick="switchRecommended()" class="text-[11px] font-medium text-accent hover:text-accent-hover flex items-center gap-1 transition-colors cursor-pointer">
+        <button id="btn-quick-rec" onclick="switchRecommended()" class="btn-spring text-[11px] font-medium text-accent hover:text-accent-hover flex items-center gap-1 transition-colors cursor-pointer">
           <span>Switch to recommended</span>
           <i data-lucide="arrow-right" class="w-3 h-3"></i>
         </button>
@@ -730,13 +815,13 @@ HTML_INTERFACE = """<!DOCTYPE html>
 
     <div class="flex items-center gap-2">
       <!-- Auto-Pilot Toggle Button -->
-      <button id="btn-toggle-ap" onclick="toggleAutoPilot()" class="h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all duration-150 bg-surface-3 border-hairline text-[#9D9D9D] hover:text-white cursor-pointer">
+      <button id="btn-toggle-ap" onclick="toggleAutoPilot()" class="btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all duration-150 bg-surface-3 border-hairline text-[#9D9D9D] hover:text-white cursor-pointer">
         <span id="ap-dot" class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
         <span id="ap-text">Auto-Pilot: Inactive</span>
       </button>
 
       <!-- Refresh Button -->
-      <button onclick="fetchStatus(true)" title="Refresh metrics" class="h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-white hover:border-hairline-strong flex items-center justify-center transition-all cursor-pointer">
+      <button onclick="fetchStatus(true)" title="Refresh metrics" class="btn-spring h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-white hover:border-hairline-strong flex items-center justify-center transition-all cursor-pointer">
         <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
       </button>
     </div>
@@ -889,6 +974,142 @@ HTML_INTERFACE = """<!DOCTYPE html>
     let subagentsPollingTimer = null;
     let mcpPollingTimer = null;
 
+    // --- React Bits: ClickSpark Canvas Engine ---
+    const sparkCanvas = document.getElementById('click-spark-canvas');
+    const sparkCtx = sparkCanvas ? sparkCanvas.getContext('2d') : null;
+    let sparks = [];
+
+    function resizeSparkCanvas() {
+      if (!sparkCanvas) return;
+      sparkCanvas.width = window.innerWidth;
+      sparkCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeSparkCanvas);
+    resizeSparkCanvas();
+
+    function triggerClickSpark(x, y, color = '#2B7FFF') {
+      if (!sparkCtx) return;
+      const count = 8;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * (Math.PI * 2) + (Math.random() * 0.4 - 0.2);
+        const speed = 1.8 + Math.random() * 2.2;
+        sparks.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 2.2 + Math.random() * 1.5,
+          alpha: 1,
+          color: color
+        });
+      }
+      if (sparks.length <= count) {
+        requestAnimationFrame(drawSparks);
+      }
+    }
+
+    function drawSparks() {
+      if (!sparkCtx || sparks.length === 0) return;
+      sparkCtx.clearRect(0, 0, sparkCanvas.width, sparkCanvas.height);
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.vx *= 0.93;
+        s.vy *= 0.93;
+        s.alpha -= 0.045;
+        if (s.alpha <= 0) {
+          sparks.splice(i, 1);
+          continue;
+        }
+        sparkCtx.save();
+        sparkCtx.globalAlpha = Math.max(0, s.alpha);
+        sparkCtx.fillStyle = s.color;
+        sparkCtx.beginPath();
+        sparkCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        sparkCtx.fill();
+        sparkCtx.restore();
+      }
+      if (sparks.length > 0) {
+        requestAnimationFrame(drawSparks);
+      }
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+      const interactive = e.target.closest('button, [role="button"], .spotlight-card, .dropdown-item, a');
+      if (interactive) {
+        const isRed = interactive.classList.contains('win-btn-close') || (interactive.innerText && interactive.innerText.includes('Quit'));
+        const isGreen = interactive.id === 'btn-toggle-ap' && state.autopilot;
+        const color = isRed ? '#EF4444' : (isGreen ? '#10B981' : '#38BDF8');
+        triggerClickSpark(e.clientX, e.clientY, color);
+      }
+    });
+
+    // --- React Bits: SpotlightCard Mouse Tracking ---
+    function initSpotlightCards() {
+      document.querySelectorAll('.spotlight-card').forEach(card => {
+        if (card.dataset.spotlightBound) return;
+        card.dataset.spotlightBound = "true";
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          card.style.setProperty('--mouse-x', `${x}px`);
+          card.style.setProperty('--mouse-y', `${y}px`);
+        });
+      });
+    }
+
+    // --- React Bits: DecryptedText Cyber Scramble ---
+    let lastDecryptedEmail = '';
+    function decryptScramble(element, targetText, duration = 380) {
+      if (!element || !targetText) return;
+      if (targetText === lastDecryptedEmail) return;
+      lastDecryptedEmail = targetText;
+      const chars = '0123456789!@#$%&*ABCDEF_';
+      const len = targetText.length;
+      let frame = 0;
+      const totalFrames = Math.floor(duration / 30);
+      const interval = setInterval(() => {
+        frame++;
+        const progress = frame / totalFrames;
+        const revealedCount = Math.floor(progress * len);
+        let result = targetText.substring(0, revealedCount);
+        for (let i = revealedCount; i < len; i++) {
+          result += chars[Math.floor(Math.random() * chars.length)];
+        }
+        element.textContent = result;
+        if (frame >= totalFrames) {
+          clearInterval(interval);
+          element.textContent = targetText;
+        }
+      }, 30);
+    }
+
+    // --- React Bits: CountUp Smooth Number Animation ---
+    function animateCountUp(element, endVal, duration = 400) {
+      if (!element) return;
+      const startVal = parseFloat(element.dataset.currentVal || '0');
+      element.dataset.currentVal = endVal;
+      if (startVal === endVal) {
+        element.textContent = `${endVal.toFixed(0)}%`;
+        return;
+      }
+      const startTime = performance.now();
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = startVal + (endVal - startVal) * ease;
+        element.textContent = `${current.toFixed(0)}%`;
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          element.textContent = `${endVal.toFixed(0)}%`;
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
     function setTab(tab) {
       currentTab = tab;
       ['accounts', 'subagents', 'mcp', 'logs', 'manage'].forEach(t => {
@@ -901,7 +1122,12 @@ HTML_INTERFACE = """<!DOCTYPE html>
         }
       });
       const activeView = document.getElementById('view-' + tab);
-      if (activeView) activeView.classList.remove('hidden');
+      if (activeView) {
+        activeView.classList.remove('hidden');
+        activeView.classList.remove('tab-animated-enter');
+        void activeView.offsetWidth; // trigger reflow for smooth spring enter
+        activeView.classList.add('tab-animated-enter');
+      }
       const activeBtn = document.getElementById('tab-' + tab);
       if (activeBtn) {
         activeBtn.classList.remove('border-transparent', 'text-[#6E6E6E]');
@@ -923,6 +1149,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
         }, 8000);
       }
       lucide.createIcons();
+      initSpotlightCards();
     }
 
     async function fetchSubagents(cid = null) {
@@ -1034,7 +1261,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
 
         // Parent Node
         const parentNode = document.createElement('div');
-        parentNode.className = 'border border-hairline rounded-md bg-surface-2 p-3 space-y-1.5';
+        parentNode.className = 'spotlight-card border border-hairline rounded-md bg-surface-2 p-3 space-y-1.5';
         parentNode.innerHTML = `
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -1058,7 +1285,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
             const branch = document.createElement('div');
             branch.className = 'ml-5 pl-4 border-l-2 border-hairline-strong relative space-y-2';
             branch.innerHTML = `
-              <div class="border border-hairline rounded-md bg-surface p-3 space-y-2 hover:border-gray-700 transition-colors">
+              <div class="spotlight-card border border-hairline rounded-md bg-surface p-3 space-y-2 hover:border-gray-700 transition-colors">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <div class="w-6 h-6 rounded bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
@@ -1095,6 +1322,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       }
 
       lucide.createIcons();
+      initSpotlightCards();
     }
 
     async function fetchMcp() {
@@ -1118,7 +1346,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       list.forEach(item => {
         const isOnline = item.status === 'ONLINE';
         const card = document.createElement('div');
-        card.className = 'border border-hairline rounded-lg bg-surface p-4 space-y-3';
+        card.className = 'spotlight-card border border-hairline rounded-lg bg-surface p-4 space-y-3';
         
         let statusBadge = isOnline
           ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center gap-1 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ONLINE</span>`
@@ -1158,11 +1386,11 @@ HTML_INTERFACE = """<!DOCTYPE html>
               Stdio JSON-RPC Ready
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="pingMcp('${item.name}')" id="btn-ping-${item.name}" class="h-6 px-2.5 rounded bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 hover:text-white text-[11px] flex items-center gap-1 transition-all">
+              <button onclick="pingMcp('${item.name}')" id="btn-ping-${item.name}" class="btn-spring h-6 px-2.5 rounded bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 hover:text-white text-[11px] flex items-center gap-1 transition-all">
                 <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i>
                 <span>Ping Probe</span>
               </button>
-              <button onclick="restartMcp('${item.name}')" class="h-6 px-2.5 rounded bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 hover:text-white text-[11px] flex items-center gap-1 transition-all">
+              <button onclick="restartMcp('${item.name}')" class="btn-spring h-6 px-2.5 rounded bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 hover:text-white text-[11px] flex items-center gap-1 transition-all">
                 <i data-lucide="rotate-ccw" class="w-3 h-3 text-gray-400"></i>
                 <span>Restart</span>
               </button>
@@ -1173,6 +1401,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       });
 
       lucide.createIcons();
+      initSpotlightCards();
     }
 
     async function pingMcp(name) {
@@ -1222,8 +1451,15 @@ HTML_INTERFACE = """<!DOCTYPE html>
     }
 
     function renderUI() {
-      // Header & Status
-      document.getElementById('current-active-email').textContent = state.active || 'None';
+      // Header & Status with DecryptedText effect
+      const emailEl = document.getElementById('current-active-email');
+      if (emailEl) {
+        if (state.active) {
+          decryptScramble(emailEl, state.active);
+        } else {
+          emailEl.textContent = 'None';
+        }
+      }
       document.getElementById('total-accounts-count').textContent = `${state.accounts.length} accounts`;
 
       // Auto-Pilot Button
@@ -1234,11 +1470,11 @@ HTML_INTERFACE = """<!DOCTYPE html>
       if (state.autopilot) {
         apDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]";
         apText.textContent = "Auto-Pilot: Active";
-        apBtn.className = "h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-emerald-950/40 border-emerald-900 text-emerald-400";
+        apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-emerald-950/40 border-emerald-900 text-emerald-400";
       } else {
         apDot.className = "w-1.5 h-1.5 rounded-full bg-gray-500";
         apText.textContent = "Auto-Pilot: Inactive";
-        apBtn.className = "h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-surface-2 border-hairline text-gray-400 hover:text-white";
+        apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-surface-2 border-hairline text-gray-400 hover:text-white";
       }
 
       // Quick Rec Box
@@ -1260,9 +1496,16 @@ HTML_INTERFACE = """<!DOCTYPE html>
         container.appendChild(createAccountCard(acc, isActive, isBest, q));
       });
 
+      // Animate Quota Counts with CountUp
+      document.querySelectorAll('.quota-pct-label').forEach(el => {
+        const val = parseFloat(el.dataset.pctVal || '0');
+        animateCountUp(el, val);
+      });
+
       // Logs Table
       renderLogs();
       lucide.createIcons();
+      initSpotlightCards();
     }
 
     function getBarColor(pct) {
@@ -1279,9 +1522,9 @@ HTML_INTERFACE = """<!DOCTYPE html>
 
     function createAccountCard(acc, isActive, isBest, q) {
       const card = document.createElement('div');
-      card.className = `border rounded-lg p-4 transition-all duration-150 ${
+      card.className = `spotlight-card border rounded-lg p-4 transition-all duration-150 ${
         isActive 
-          ? 'bg-surface border-emerald-900/60 shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+          ? 'bg-surface border-emerald-900/70 border-glow-active' 
           : 'bg-surface border-hairline hover:border-hairline-strong'
       }`;
 
@@ -1315,7 +1558,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       if (isActive) {
         buttonHtml = `<button disabled class="h-7 px-3 rounded-md text-xs font-medium bg-surface-3 text-[#6E6E6E] border border-hairline cursor-default">In Use</button>`;
       } else {
-        buttonHtml = `<button onclick="switchAccount('${acc}')" class="h-7 px-3 rounded-md text-xs font-medium bg-surface-3 hover:bg-surface-hover text-[#CCCCCC] hover:text-white border border-hairline hover:border-hairline-strong transition-all flex items-center gap-1.5 cursor-pointer">
+        buttonHtml = `<button onclick="switchAccount('${acc}')" class="btn-spring h-7 px-3 rounded-md text-xs font-medium bg-surface-3 hover:bg-surface-hover text-[#CCCCCC] hover:text-white border border-hairline hover:border-hairline-strong transition-all flex items-center gap-1.5 cursor-pointer">
           <span>Switch</span>
           <i data-lucide="arrow-right" class="w-3 h-3 text-[#9D9D9D]"></i>
         </button>`;
@@ -1329,7 +1572,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
           </div>
           <div class="flex items-center gap-1.5">
             ${buttonHtml}
-            <button onclick="deleteAccount('${acc}')" title="Remove account" class="h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 flex items-center justify-center transition-all cursor-pointer">
+            <button onclick="deleteAccount('${acc}')" title="Remove account" class="btn-spring h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 flex items-center justify-center transition-all cursor-pointer">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
@@ -1348,7 +1591,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
               <div class="flex items-center justify-between text-[11px]">
                 <span class="text-gray-400">5-Hour Limit</span>
                 <div class="flex items-center gap-1.5 font-mono">
-                  <span class="${getTextPercentColor(g5)} font-medium">${g5.toFixed(0)}%</span>
+                  <span class="quota-pct-label ${getTextPercentColor(g5)} font-medium" data-pct-val="${g5}">${g5.toFixed(0)}%</span>
                   ${g5 < 100 && g5_rt ? `<span class="text-[10px] text-gray-500">${g5_rt}</span>` : ''}
                 </div>
               </div>
@@ -1362,7 +1605,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
               <div class="flex items-center justify-between text-[11px]">
                 <span class="text-gray-400">Weekly Limit</span>
                 <div class="flex items-center gap-1.5 font-mono">
-                  <span class="${getTextPercentColor(gw)} font-medium">${gw.toFixed(0)}%</span>
+                  <span class="quota-pct-label ${getTextPercentColor(gw)} font-medium" data-pct-val="${gw}">${gw.toFixed(0)}%</span>
                   ${gw < 100 && gw_rt ? `<span class="text-[10px] text-gray-500">${gw_rt}</span>` : ''}
                 </div>
               </div>
@@ -1383,7 +1626,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
               <div class="flex items-center justify-between text-[11px]">
                 <span class="text-gray-400">5-Hour Limit</span>
                 <div class="flex items-center gap-1.5 font-mono">
-                  <span class="${getTextPercentColor(c5)} font-medium">${c5.toFixed(0)}%</span>
+                  <span class="quota-pct-label ${getTextPercentColor(c5)} font-medium" data-pct-val="${c5}">${c5.toFixed(0)}%</span>
                   ${c5 < 100 && c5_rt ? `<span class="text-[10px] text-gray-500">${c5_rt}</span>` : ''}
                 </div>
               </div>
@@ -1397,7 +1640,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
               <div class="flex items-center justify-between text-[11px]">
                 <span class="text-gray-400">Weekly Limit</span>
                 <div class="flex items-center gap-1.5 font-mono">
-                  <span class="${getTextPercentColor(cw)} font-medium">${cw.toFixed(0)}%</span>
+                  <span class="quota-pct-label ${getTextPercentColor(cw)} font-medium" data-pct-val="${cw}">${cw.toFixed(0)}%</span>
                   ${cw < 100 && cw_rt ? `<span class="text-[10px] text-gray-500">${cw_rt}</span>` : ''}
                 </div>
               </div>
@@ -1588,9 +1831,15 @@ HTML_INTERFACE = """<!DOCTYPE html>
         if (isMax) {
           svgMax.classList.add('hidden');
           svgRestore.classList.remove('hidden');
+          svgRestore.classList.remove('icon-spin-enter');
+          void svgRestore.offsetWidth;
+          svgRestore.classList.add('icon-spin-enter');
         } else {
           svgMax.classList.remove('hidden');
           svgRestore.classList.add('hidden');
+          svgMax.classList.remove('icon-spin-enter');
+          void svgMax.offsetWidth;
+          svgMax.classList.add('icon-spin-enter');
         }
       }
     }
@@ -1926,8 +2175,14 @@ class AntigravityProWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.sig_toggle_max.connect(self.on_toggle_max)
-        self.sig_minimize.connect(self.showMinimized)
+        self._is_custom_maximized = False
+        self._normal_geometry = None
+        self._max_anim = None
+        self._min_anim = None
+        self._restore_anim = None
+
+        self.sig_toggle_max.connect(self.animate_toggle_max)
+        self.sig_minimize.connect(self.animate_minimize)
         self.sig_close.connect(self.close)
         self.sig_quit.connect(QApplication.instance().quit)
 
@@ -1947,11 +2202,56 @@ class AntigravityProWindow(QMainWindow):
         
         self.init_tray()
 
-    def on_toggle_max(self):
-        if self.isMaximized():
-            self.showNormal()
+    def is_window_maximized(self):
+        return self._is_custom_maximized or self.isMaximized()
+
+    def animate_toggle_max(self):
+        if self._max_anim and self._max_anim.state() == QPropertyAnimation.Running:
+            return
+        
+        screen = QApplication.primaryScreen()
+        avail = screen.availableGeometry()
+
+        if self.is_window_maximized():
+            target = self._normal_geometry or QRect(avail.x() + 80, avail.y() + 60, 680, 780)
+            self._max_anim = QPropertyAnimation(self, b"geometry")
+            self._max_anim.setDuration(220)
+            self._max_anim.setEasingCurve(QEasingCurve.OutCubic)
+            self._max_anim.setStartValue(self.geometry())
+            self._max_anim.setEndValue(target)
+            def on_restore_finished():
+                self._is_custom_maximized = False
+                if hasattr(self, "browser") and self.browser.page():
+                    self.browser.page().runJavaScript("if (typeof setMaximizedState === 'function') setMaximizedState(false);")
+            self._max_anim.finished.connect(on_restore_finished)
+            self._max_anim.start()
         else:
-            self.showMaximized()
+            self._normal_geometry = self.geometry()
+            self._max_anim = QPropertyAnimation(self, b"geometry")
+            self._max_anim.setDuration(220)
+            self._max_anim.setEasingCurve(QEasingCurve.OutCubic)
+            self._max_anim.setStartValue(self.geometry())
+            self._max_anim.setEndValue(avail)
+            def on_max_finished():
+                self._is_custom_maximized = True
+                if hasattr(self, "browser") and self.browser.page():
+                    self.browser.page().runJavaScript("if (typeof setMaximizedState === 'function') setMaximizedState(true);")
+            self._max_anim.finished.connect(on_max_finished)
+            self._max_anim.start()
+
+    def animate_minimize(self):
+        if self._min_anim and self._min_anim.state() == QPropertyAnimation.Running:
+            return
+        self._min_anim = QPropertyAnimation(self, b"windowOpacity")
+        self._min_anim.setDuration(140)
+        self._min_anim.setEasingCurve(QEasingCurve.InQuad)
+        self._min_anim.setStartValue(1.0)
+        self._min_anim.setEndValue(0.0)
+        def on_min_finished():
+            self.showMinimized()
+            self.setWindowOpacity(1.0)
+        self._min_anim.finished.connect(on_min_finished)
+        self._min_anim.start()
 
     def nativeEvent(self, eventType, message):
         msg = wintypes.MSG.from_address(message.__int__())
@@ -1966,7 +2266,7 @@ class AntigravityProWindow(QMainWindow):
             h = self.height()
             
             # If window is currently maximized, disable resize borders
-            if self.isMaximized():
+            if self.is_window_maximized():
                 if p.y() < 36:
                     if 380 <= p.x() <= (w - 140):
                         return True, 2  # HTCAPTION (double click to restore / drag to unmaximize)
@@ -1995,14 +2295,14 @@ class AntigravityProWindow(QMainWindow):
                 
         elif msg.message == 0x00A3:  # WM_NCLBUTTONDBLCLK
             if msg.wParam == 2:  # HTCAPTION
-                self.on_toggle_max()
+                self.animate_toggle_max()
                 return True, 0
 
         return super().nativeEvent(eventType, message)
 
     def changeEvent(self, event):
         if event.type() == QtCore.QEvent.WindowStateChange:
-            is_max = self.isMaximized()
+            is_max = self.is_window_maximized()
             if hasattr(self, "browser") and self.browser.page():
                 self.browser.page().runJavaScript(f"if (typeof setMaximizedState === 'function') setMaximizedState({str(is_max).lower()});")
         super().changeEvent(event)
@@ -2059,10 +2359,17 @@ class AntigravityProWindow(QMainWindow):
                 self.show_normal_window()
 
     def show_normal_window(self):
+        self.setWindowOpacity(0.0)
         self.show()
         self.setWindowState(self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
         self.activateWindow()
         apply_dwm_frameless_styling(int(self.winId()))
+        self._restore_anim = QPropertyAnimation(self, b"windowOpacity")
+        self._restore_anim.setDuration(160)
+        self._restore_anim.setEasingCurve(QEasingCurve.OutQuad)
+        self._restore_anim.setStartValue(0.0)
+        self._restore_anim.setEndValue(1.0)
+        self._restore_anim.start()
 
     def showEvent(self, event):
         super().showEvent(event)
