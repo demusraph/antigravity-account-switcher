@@ -595,8 +595,8 @@ HTML_INTERFACE = """<!DOCTYPE html>
   <div class="h-[30px] bg-[#161616] border-b border-[#222222] flex items-center justify-between shrink-0 select-none text-xs z-50">
     <!-- Left: Brand & Menus -->
     <div class="flex items-center h-full pl-2.5 gap-1 select-none">
-      <img src="/app_icon.png" class="w-4 h-4 mr-1 select-none pointer-events-none" onerror="this.style.display='none'">
-      <span class="text-xs font-medium text-[#FAFAFA] tracking-tight mr-1.5 select-none">Antigravity</span>
+      <img src="/app_icon.png" class="w-4 h-4 mr-1.5 select-none pointer-events-none" onerror="this.style.display='none'">
+      <span class="text-xs font-semibold text-[#FAFAFA] tracking-tight mr-2 select-none">Antigravity Control Center</span>
       
       <!-- File Menu -->
       <div class="relative">
@@ -661,13 +661,10 @@ HTML_INTERFACE = """<!DOCTYPE html>
           </div>
         </div>
       </div>
-
-      <!-- Badge Pill -->
-      <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-accent bg-accent/10 border border-accent/20 tracking-wider">CONTROL CENTER</span>
     </div>
 
     <!-- Center Drag Region -->
-    <div class="flex-1 h-full cursor-default select-none" style="-webkit-app-region: drag;"></div>
+    <div ondblclick="windowMaximize()" class="flex-1 h-full cursor-default select-none" style="-webkit-app-region: drag;"></div>
 
     <!-- Right: Window Controls (1:1 Windows 11 / Antigravity 2.0) -->
     <div class="flex items-center h-full shrink-0 select-none">
@@ -1757,7 +1754,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         elif self.path == "/api/window/minimize":
             if WINDOW_INSTANCE:
-                QtCore.QMetaObject.invokeMethod(WINDOW_INSTANCE, "showMinimized", QtCore.Qt.QueuedConnection)
+                WINDOW_INSTANCE.sig_minimize.emit()
             resp_bytes = b'{"status":"ok"}'
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -1767,12 +1764,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         elif self.path == "/api/window/maximize":
             if WINDOW_INSTANCE:
-                def toggle_max():
-                    if WINDOW_INSTANCE.isMaximized():
-                        WINDOW_INSTANCE.showNormal()
-                    else:
-                        WINDOW_INSTANCE.showMaximized()
-                QtCore.QTimer.singleShot(0, toggle_max)
+                WINDOW_INSTANCE.sig_toggle_max.emit()
             resp_bytes = b'{"status":"ok"}'
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -1782,7 +1774,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         elif self.path == "/api/window/close":
             if WINDOW_INSTANCE:
-                QtCore.QMetaObject.invokeMethod(WINDOW_INSTANCE, "close", QtCore.Qt.QueuedConnection)
+                WINDOW_INSTANCE.sig_close.emit()
             resp_bytes = b'{"status":"ok"}'
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -1791,7 +1783,10 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self.wfile.write(resp_bytes)
 
         elif self.path == "/api/window/quit":
-            QtCore.QTimer.singleShot(50, QApplication.instance().quit)
+            if WINDOW_INSTANCE:
+                WINDOW_INSTANCE.sig_quit.emit()
+            else:
+                QtCore.QTimer.singleShot(50, QApplication.instance().quit)
             resp_bytes = b'{"status":"ok"}'
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -1884,6 +1879,12 @@ def start_local_server():
 
 def apply_dwm_frameless_styling(hwnd):
     try:
+        user32 = ctypes.windll.user32
+        style = user32.GetWindowLongW(hwnd, -16) # GWL_STYLE
+        # WS_MAXIMIZEBOX = 0x00010000, WS_MINIMIZEBOX = 0x00020000, WS_THICKFRAME = 0x00040000
+        style |= 0x00010000 | 0x00020000 | 0x00040000
+        user32.SetWindowLongW(hwnd, -16, style)
+
         dwm = ctypes.windll.dwmapi
         # Windows 11 rounded corners: DWMWA_WINDOW_CORNER_PREFERENCE = 33 (DWMWCP_ROUND = 2)
         corner = ctypes.c_int(2)
@@ -1896,8 +1897,18 @@ def apply_dwm_frameless_styling(hwnd):
 
 # --- Desktop Window Host ---
 class AntigravityProWindow(QMainWindow):
+    sig_toggle_max = QtCore.pyqtSignal()
+    sig_minimize = QtCore.pyqtSignal()
+    sig_close = QtCore.pyqtSignal()
+    sig_quit = QtCore.pyqtSignal()
+
     def __init__(self):
         super().__init__()
+        self.sig_toggle_max.connect(self.on_toggle_max)
+        self.sig_minimize.connect(self.showMinimized)
+        self.sig_close.connect(self.close)
+        self.sig_quit.connect(QApplication.instance().quit)
+
         self.setWindowTitle("Antigravity Control Center")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         self.resize(680, 780)
@@ -1914,6 +1925,12 @@ class AntigravityProWindow(QMainWindow):
         
         self.init_tray()
 
+    def on_toggle_max(self):
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
     def nativeEvent(self, eventType, message):
         msg = wintypes.MSG.from_address(message.__int__())
         if msg.message == 0x0084:  # WM_NCHITTEST
@@ -1925,29 +1942,33 @@ class AntigravityProWindow(QMainWindow):
             p = self.mapFromGlobal(QPoint(x, y))
             w = self.width()
             h = self.height()
-            border = 6
             
+            # If window is currently maximized, disable resize borders
+            if self.isMaximized():
+                if p.y() < 30:
+                    if 300 <= p.x() <= (w - 140):
+                        return True, 2  # HTCAPTION (double click to restore / drag to unmaximize)
+                    return False, 0
+                return False, 0
+
+            border = 6
             left = p.x() < border
             right = p.x() > w - border
-            top = p.y() < border
             bottom = p.y() > h - border
             
-            if top and left: return True, 13     # HTTOPLEFT
-            if top and right: return True, 14    # HTTOPRIGHT
-            if bottom and left: return True, 16  # HTBOTTOMLEFT
-            if bottom and right: return True, 17 # HTBOTTOMRIGHT
-            if left: return True, 10             # HTLEFT
-            if right: return True, 11            # HTRIGHT
-            if bottom: return True, 15           # HTBOTTOM
-            if top: return True, 12              # HTTOP
+            # Corners
+            if p.y() < border and left: return True, 13     # HTTOPLEFT
+            if p.y() < border and right: return True, 14    # HTTOPRIGHT
+            if bottom and left: return True, 16             # HTBOTTOMLEFT
+            if bottom and right: return True, 17            # HTBOTTOMRIGHT
+            if left: return True, 10                        # HTLEFT
+            if right: return True, 11                       # HTRIGHT
+            if bottom: return True, 15                      # HTBOTTOM
             
-            # Top bar drag & snap (height: 30px)
-            # Left interactive area: x < 330 (Logo, Brand, File, View, Window, Badge)
-            # Right interactive area: x > w - 142 (Min, Max, Close)
-            # Center region: 330 <= x <= (w - 142) -> HTCAPTION for native drag & snap
-            if border <= p.y() < 30:
-                if 330 <= p.x() <= (w - 142):
-                    return True, 2  # HTCAPTION
+            # Top bar interaction (0 <= y < 30)
+            if p.y() < 30:
+                if 300 <= p.x() <= (w - 140):
+                    return True, 2  # HTCAPTION (native drag & snap & double-click maximize)
                 return False, 0
                 
         return super().nativeEvent(eventType, message)
