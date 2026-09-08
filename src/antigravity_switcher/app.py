@@ -8,6 +8,18 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = open(os.devnull, "w")
 
+if sys.platform == "win32":
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        for std_id in (-10, -11, -12):
+            h = kernel32.GetStdHandle(std_id)
+            if not h or h == -1:
+                h_nul = kernel32.CreateFileW("NUL", 0xC0000000, 3, None, 3, 0, None)
+                kernel32.SetStdHandle(std_id, h_nul)
+    except Exception:
+        pass
+
 USERPROFILE = os.environ.get("USERPROFILE", "")
 APPDATA = os.environ.get("APPDATA", "")
 LOCALAPPDATA = os.environ.get("LOCALAPPDATA", "")
