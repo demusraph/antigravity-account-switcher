@@ -810,51 +810,51 @@ HTML_INTERFACE = """<!DOCTYPE html>
   </div>
 
   <!-- Unified Mission Control Toolbar -->
-  <div class="h-11 border-b border-hairline bg-surface-2 px-4 flex items-center justify-between shrink-0 text-xs">
-    <div class="flex items-center gap-2.5">
-      <div class="flex items-center gap-1.5 text-[#9D9D9D]">
-        <span class="text-[#6E6E6E]">Active:</span>
-        <span id="current-active-email" class="font-medium text-[#E2E8F0]">Loading...</span>
-        <span class="text-[#333333]">•</span>
-        <span id="total-accounts-count" class="text-[#6E6E6E]">0 accounts</span>
+  <div class="h-11 border-b border-hairline bg-surface-2 px-3.5 flex items-center justify-between shrink-0 text-xs select-none whitespace-nowrap overflow-hidden">
+    <div class="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+      <div class="flex items-center gap-1.5 text-[#9D9D9D] min-w-0 shrink">
+        <span class="text-[#6E6E6E] shrink-0 whitespace-nowrap">Active:</span>
+        <span id="current-active-email" class="font-medium text-[#E2E8F0] truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px] inline-block align-bottom whitespace-nowrap" title="Loading...">Loading...</span>
+        <span class="text-[#333333] shrink-0">•</span>
+        <span id="total-accounts-count" class="text-[#6E6E6E] whitespace-nowrap shrink-0">0 accounts</span>
       </div>
       
       <!-- Quick Recommendation Button -->
-      <div id="quick-rec-box" class="hidden pl-2 border-l border-hairline/60">
-        <button id="btn-quick-rec" onclick="switchRecommended()" class="btn-spring text-[11px] font-medium text-accent hover:text-accent-hover flex items-center gap-1 transition-colors cursor-pointer">
-          <span>Switch to recommended</span>
-          <i data-lucide="arrow-right" class="w-3 h-3"></i>
+      <div id="quick-rec-box" class="hidden pl-2 border-l border-hairline/60 shrink-0 whitespace-nowrap">
+        <button id="btn-quick-rec" onclick="switchRecommended()" class="btn-spring text-[11px] font-medium text-accent hover:text-accent-hover flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap shrink-0">
+          <span class="whitespace-nowrap">Switch to recommended</span>
+          <i data-lucide="arrow-right" class="w-3 h-3 shrink-0"></i>
         </button>
       </div>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 shrink-0 ml-2">
       <!-- Auto-Pilot Toggle Button -->
-      <button id="btn-toggle-ap" onclick="toggleAutoPilot()" class="btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all duration-150 bg-surface-3 border-hairline text-[#9D9D9D] hover:text-white cursor-pointer">
-        <span id="ap-dot" class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-        <span id="ap-text">Auto-Pilot: Inactive</span>
+      <button id="btn-toggle-ap" onclick="toggleAutoPilot()" class="btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all duration-150 bg-surface-3 border-hairline text-[#9D9D9D] hover:text-white cursor-pointer whitespace-nowrap shrink-0">
+        <span id="ap-dot" class="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></span>
+        <span id="ap-text" class="whitespace-nowrap">Auto-Pilot: Inactive</span>
       </button>
 
       <!-- Refresh Button -->
-      <button onclick="fetchStatus(true)" title="Refresh metrics" class="btn-spring h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-white hover:border-hairline-strong flex items-center justify-center transition-all cursor-pointer">
-        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+      <button onclick="fetchStatus(true)" title="Refresh metrics" class="btn-spring h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-white hover:border-hairline-strong flex items-center justify-center transition-all cursor-pointer shrink-0">
+        <i data-lucide="rotate-cw" class="w-3.5 h-3.5 shrink-0"></i>
       </button>
     </div>
   </div>
 
   <!-- Navigation Tabs -->
-  <nav class="flex border-b border-hairline px-5 gap-5 text-xs shrink-0 bg-surface-2/40">
-    <div role="button" onclick="setTab('accounts')" id="tab-accounts" class="py-2.5 font-medium border-b-2 border-accent text-white transition-all cursor-pointer">Accounts</div>
-    <div role="button" onclick="setTab('subagents')" id="tab-subagents" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5">
-      <span>Subagent DAG</span>
-      <span id="subagents-pulse-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 hidden"></span>
+  <nav class="flex border-b border-hairline px-4 gap-4 sm:gap-5 text-xs shrink-0 bg-surface-2/40 overflow-x-auto whitespace-nowrap select-none">
+    <div role="button" onclick="setTab('accounts')" id="tab-accounts" class="py-2.5 font-medium border-b-2 border-accent text-white transition-all cursor-pointer whitespace-nowrap shrink-0">Accounts</div>
+    <div role="button" onclick="setTab('subagents')" id="tab-subagents" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0">
+      <span class="whitespace-nowrap">Subagent DAG</span>
+      <span id="subagents-pulse-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 hidden shrink-0"></span>
     </div>
-    <div role="button" onclick="setTab('mcp')" id="tab-mcp" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5">
-      <span>MCP Matrix</span>
-      <span id="mcp-count-badge" class="px-1.5 py-0.2 bg-surface-3 rounded text-[10px] text-gray-400 font-mono">5</span>
+    <div role="button" onclick="setTab('mcp')" id="tab-mcp" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0">
+      <span class="whitespace-nowrap">MCP Matrix</span>
+      <span id="mcp-count-badge" class="px-1.5 py-0.2 bg-surface-3 rounded text-[10px] text-gray-400 font-mono shrink-0">5</span>
     </div>
-    <div role="button" onclick="setTab('logs')" id="tab-logs" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer">Activity Logs</div>
-    <div role="button" onclick="setTab('manage')" id="tab-manage" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer">Enroll Account</div>
+    <div role="button" onclick="setTab('logs')" id="tab-logs" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer whitespace-nowrap shrink-0">Activity Logs</div>
+    <div role="button" onclick="setTab('manage')" id="tab-manage" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer whitespace-nowrap shrink-0">Enroll Account</div>
   </nav>
 
   <!-- Main Content Body -->
@@ -1400,8 +1400,10 @@ HTML_INTERFACE = """<!DOCTYPE html>
       const emailEl = document.getElementById('current-active-email');
       if (emailEl) {
         if (state.active) {
+          emailEl.title = state.active;
           decryptScramble(emailEl, state.active);
         } else {
+          emailEl.title = 'No active account';
           emailEl.textContent = 'None';
         }
       }
@@ -1413,13 +1415,13 @@ HTML_INTERFACE = """<!DOCTYPE html>
       const apBtn = document.getElementById('btn-toggle-ap');
 
       if (state.autopilot) {
-        apDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]";
+        apDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0";
         apText.textContent = "Auto-Pilot: Active";
-        apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-emerald-950/40 border-emerald-900 text-emerald-400";
+        apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-emerald-950/40 border-emerald-900 text-emerald-400 whitespace-nowrap shrink-0 cursor-pointer";
       } else {
-        apDot.className = "w-1.5 h-1.5 rounded-full bg-gray-500";
+        apDot.className = "w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0";
         apText.textContent = "Auto-Pilot: Inactive";
-        apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-surface-2 border-hairline text-gray-400 hover:text-white";
+        apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-surface-3 border-hairline text-gray-400 hover:text-white whitespace-nowrap shrink-0 cursor-pointer";
       }
 
       // Quick Rec Box
@@ -1651,13 +1653,13 @@ HTML_INTERFACE = """<!DOCTYPE html>
       const apBtn = document.getElementById('btn-toggle-ap');
 
       if (targetState) {
-        if (apDot) apDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+        if (apDot) apDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0";
         if (apText) apText.textContent = "Auto-Pilot: Starting...";
-        if (apBtn) apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-emerald-950/40 border-emerald-900 text-emerald-400";
+        if (apBtn) apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-emerald-950/40 border-emerald-900 text-emerald-400 whitespace-nowrap shrink-0";
       } else {
-        if (apDot) apDot.className = "w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse";
+        if (apDot) apDot.className = "w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse shrink-0";
         if (apText) apText.textContent = "Auto-Pilot: Stopping...";
-        if (apBtn) apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-surface-2 border-hairline text-gray-400";
+        if (apBtn) apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-surface-3 border-hairline text-gray-400 whitespace-nowrap shrink-0";
       }
 
       try {
@@ -2157,8 +2159,8 @@ class AntigravityProWindow(QMainWindow):
 
         self.setWindowTitle("Antigravity Control Center")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
-        self.resize(680, 780)
-        self.setMinimumSize(600, 680)
+        self.resize(840, 800)
+        self.setMinimumSize(660, 680)
 
         icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
         if icon_to_use:
@@ -2182,7 +2184,7 @@ class AntigravityProWindow(QMainWindow):
         avail = screen.availableGeometry()
 
         if self.is_window_maximized():
-            target = self._normal_geometry or QRect(avail.x() + 80, avail.y() + 60, 680, 780)
+            target = self._normal_geometry or QRect(avail.x() + 80, avail.y() + 60, 840, 800)
             self._max_anim = QPropertyAnimation(self, b"geometry")
             self._max_anim.setDuration(220)
             self._max_anim.setEasingCurve(QEasingCurve.OutCubic)
@@ -2237,7 +2239,7 @@ class AntigravityProWindow(QMainWindow):
             # If window is currently maximized, disable resize borders
             if self.is_window_maximized():
                 if p.y() < 36:
-                    if 380 <= p.x() <= (w - 140):
+                    if 350 <= p.x() <= (w - 140):
                         return True, 2  # HTCAPTION (double click to restore / drag to unmaximize)
                     return False, 0
                 return False, 0
@@ -2258,7 +2260,7 @@ class AntigravityProWindow(QMainWindow):
             
             # Top bar interaction (0 <= y < 36)
             if p.y() < 36:
-                if 380 <= p.x() <= (w - 140):
+                if 350 <= p.x() <= (w - 140):
                     return True, 2  # HTCAPTION (native drag & snap & double-click maximize)
                 return False, 0
                 
