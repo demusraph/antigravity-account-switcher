@@ -1,0 +1,42 @@
+﻿[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "antigravity-switcher"
+version = "1.0.0"
+description = "Enterprise-grade multi-account switcher and autonomous quota auto-pilot for Google Antigravity"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "demusraph" }
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: User Interfaces",
+]
+dependencies = [
+    "PyQt5>=5.15.9",
+    "PyQtWebEngine>=5.15.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/demusraph/antigravity-account-switcher"
+Repository = "https://github.com/demusraph/antigravity-account-switcher.git"
+Issues = "https://github.com/demusraph/antigravity-account-switcher/issues"
+
+[project.scripts]
+antigravity-switcher = "antigravity_switcher.app:main"
+antigravity-cli = "antigravity_switcher.switcher:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

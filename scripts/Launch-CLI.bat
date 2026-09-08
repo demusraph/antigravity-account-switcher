@@ -1,40 +1,40 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 :: 1. Check python in PATH
 where python >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    python "agy_switcher.py"
+    python "main.py" --cli
     exit /b 0
 )
 
 :: 2. Check py launcher
 where py >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    py -3 "agy_switcher.py"
+    py -3 "main.py" --cli
     exit /b 0
 )
 
 :: 3. Check Anaconda / Miniconda paths
 if exist "%USERPROFILE%\anaconda3\python.exe" (
-    "%USERPROFILE%\anaconda3\python.exe" "agy_switcher.py"
+    "%USERPROFILE%\anaconda3\python.exe" "main.py" --cli
     exit /b 0
 )
 if exist "%USERPROFILE%\miniconda3\python.exe" (
-    "%USERPROFILE%\miniconda3\python.exe" "agy_switcher.py"
+    "%USERPROFILE%\miniconda3\python.exe" "main.py" --cli
     exit /b 0
 )
 if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" (
-    "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" "agy_switcher.py"
+    "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" "main.py" --cli
     exit /b 0
 )
 if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
-    "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" "agy_switcher.py"
+    "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" "main.py" --cli
     exit /b 0
 )
 if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
-    "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" "agy_switcher.py"
+    "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" "main.py" --cli
     exit /b 0
 )
 

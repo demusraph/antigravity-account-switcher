@@ -12,8 +12,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$desktop = [Environment]::GetFolderPath('Desktop'); " ^
     "$shortcut = $sh.CreateShortcut(\"$desktop\Antigravity Control Center.lnk\"); " ^
     "$shortcut.TargetPath = \"%~dp0Launch-GUI.bat\"; " ^
-    "$shortcut.WorkingDirectory = \"%~dp0\"; " ^
-    "$shortcut.IconLocation = \"%~dp0app_icon.ico,0\"; " ^
+    "$shortcut.WorkingDirectory = (Resolve-Path '%~dp0..').Path; " ^
+    "$ico = (Resolve-Path '%~dp0..\assets\icons\app_icon.ico').Path; " ^
+    "$shortcut.IconLocation = \"$ico,0\"; " ^
     "$shortcut.Description = 'Antigravity Multi-Account Controller'; " ^
     "$shortcut.WindowStyle = 7; " ^
     "$shortcut.Save(); " ^

@@ -19,8 +19,14 @@ DEVTOOLS_PORT_FILE = os.path.join(APPDATA, "Antigravity", "DevToolsActivePort")
 LANG_SERVER_LOG = os.path.join(APPDATA, "Antigravity", "logs", "language_server.log")
 
 # Import core switcher functions
-sys.path.insert(0, APP_DIR)
-import agy_switcher
+try:
+    from antigravity_switcher import switcher as agy_switcher
+except ImportError:
+    try:
+        import switcher as agy_switcher
+    except ImportError:
+        sys.path.insert(0, APP_DIR)
+        import switcher as agy_switcher
 
 def log(msg):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

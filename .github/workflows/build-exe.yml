@@ -1,4 +1,4 @@
-﻿name: Build & Release Executable
+name: Build & Release Executable
 
 on:
   push:
@@ -34,14 +34,13 @@ jobs:
         run: |
           pyinstaller --noconsole --onedir `
             --name="AntigravityControlCenter" `
-            --icon="app_icon.ico" `
-            --add-data="app_icon.png;." `
-            --add-data="app_icon.ico;." `
-            --add-data="agy_daemon.py;." `
-            --add-data="agy_switcher.py;." `
+            --icon="assets/icons/app_icon.ico" `
+            --add-data="assets/icons/app_icon.png;assets/icons" `
+            --add-data="assets/icons/app_icon.ico;assets/icons" `
             --hidden-import="PyQt5" `
             --hidden-import="PyQt5.QtWebEngineWidgets" `
-            --clean -y agy_app.pyw
+            --paths="src" `
+            --clean -y main.py
 
       - name: Package Distributable Zip
         shell: pwsh

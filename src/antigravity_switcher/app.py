@@ -61,13 +61,27 @@ ACCOUNTS_DIR = os.path.join(SWITCHER_DIR, "accounts")
 ACTIVE_FILE = os.path.join(SWITCHER_DIR, "active_email.txt")
 AUTOPILOT_PID_FILE = os.path.join(SWITCHER_DIR, "autopilot.pid")
 LOG_FILE = os.path.join(SWITCHER_DIR, "autopilot.log")
-DAEMON_SCRIPT = os.path.join(APP_DIR, "agy_daemon.py")
+# Icon detection across bundle, assets/icons, and repo structure
+_CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_DIR = os.path.dirname(os.path.dirname(_CURR_DIR))
 
-import base64
+possible_pngs = [
+    os.path.join(BUNDLE_DIR, "assets", "icons", "app_icon.png"),
+    os.path.join(BUNDLE_DIR, "app_icon.png"),
+    os.path.join(APP_DIR, "assets", "icons", "app_icon.png"),
+    os.path.join(APP_DIR, "app_icon.png"),
+    os.path.join(_REPO_DIR, "assets", "icons", "app_icon.png"),
+]
+ICON_PNG = next((p for p in possible_pngs if os.path.exists(p)), "")
 
-# Icon detection across bundle and app dir
-ICON_PNG = os.path.join(BUNDLE_DIR, "app_icon.png") if os.path.exists(os.path.join(BUNDLE_DIR, "app_icon.png")) else os.path.join(APP_DIR, "app_icon.png")
-ICON_ICO = os.path.join(BUNDLE_DIR, "app_icon.ico") if os.path.exists(os.path.join(BUNDLE_DIR, "app_icon.ico")) else os.path.join(APP_DIR, "app_icon.ico")
+possible_icos = [
+    os.path.join(BUNDLE_DIR, "assets", "icons", "app_icon.ico"),
+    os.path.join(BUNDLE_DIR, "app_icon.ico"),
+    os.path.join(APP_DIR, "assets", "icons", "app_icon.ico"),
+    os.path.join(APP_DIR, "app_icon.ico"),
+    os.path.join(_REPO_DIR, "assets", "icons", "app_icon.ico"),
+]
+ICON_ICO = next((p for p in possible_icos if os.path.exists(p)), "")
 
 # Obfuscated runtime credentials (Google Antigravity public client)
 _K = 0x37
@@ -1200,13 +1214,21 @@ class AntigravityProWindow(QMainWindow):
 
 def main():
     if "--daemon" in sys.argv:
-        import agy_daemon
-        agy_daemon.main_loop()
+        try:
+            from antigravity_switcher import daemon
+            daemon.main_loop()
+        except ImportError:
+            import daemon
+            daemon.main_loop()
         sys.exit(0)
 
     if "--cli" in sys.argv:
-        import agy_switcher
-        agy_switcher.main()
+        try:
+            from antigravity_switcher import switcher
+            switcher.main()
+        except ImportError:
+            import switcher
+            switcher.main()
         sys.exit(0)
 
     ensure_dirs()
