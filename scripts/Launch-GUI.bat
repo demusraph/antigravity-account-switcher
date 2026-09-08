@@ -2,46 +2,49 @@
 setlocal
 cd /d "%~dp0.."
 
+set TARGET_SCRIPT=%~1
+if "%TARGET_SCRIPT%"=="" set TARGET_SCRIPT=main.py
+
 :: 1. Check pythonw in PATH
 where pythonw >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    start "" pythonw "main.py"
+    start "" pythonw "%TARGET_SCRIPT%"
     exit /b 0
 )
 
 :: 2. Check py launcher
 where py >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    start "" py -3w "main.py"
+    start "" py -3w "%TARGET_SCRIPT%"
     exit /b 0
 )
 
 :: 3. Check Anaconda / Miniconda paths
 if exist "%USERPROFILE%\anaconda3\pythonw.exe" (
-    start "" "%USERPROFILE%\anaconda3\pythonw.exe" "main.py"
+    start "" "%USERPROFILE%\anaconda3\pythonw.exe" "%TARGET_SCRIPT%"
     exit /b 0
 )
 if exist "%USERPROFILE%\miniconda3\pythonw.exe" (
-    start "" "%USERPROFILE%\miniconda3\pythonw.exe" "main.py"
+    start "" "%USERPROFILE%\miniconda3\pythonw.exe" "%TARGET_SCRIPT%"
     exit /b 0
 )
 if exist "%LOCALAPPDATA%\Programs\Python\Python313\pythonw.exe" (
-    start "" "%LOCALAPPDATA%\Programs\Python\Python313\pythonw.exe" "main.py"
+    start "" "%LOCALAPPDATA%\Programs\Python\Python313\pythonw.exe" "%TARGET_SCRIPT%"
     exit /b 0
 )
 if exist "%LOCALAPPDATA%\Programs\Python\Python312\pythonw.exe" (
-    start "" "%LOCALAPPDATA%\Programs\Python\Python312\pythonw.exe" "main.py"
+    start "" "%LOCALAPPDATA%\Programs\Python\Python312\pythonw.exe" "%TARGET_SCRIPT%"
     exit /b 0
 )
 if exist "%LOCALAPPDATA%\Programs\Python\Python311\pythonw.exe" (
-    start "" "%LOCALAPPDATA%\Programs\Python\Python311\pythonw.exe" "main.py"
+    start "" "%LOCALAPPDATA%\Programs\Python\Python311\pythonw.exe" "%TARGET_SCRIPT%"
     exit /b 0
 )
 
 :: 4. Fallback to normal python
 where python >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    start "" python "main.py"
+    start "" python "%TARGET_SCRIPT%"
     exit /b 0
 )
 

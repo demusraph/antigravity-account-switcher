@@ -16,6 +16,18 @@ from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
+# Set explicit Windows AppUserModelID so Taskbar uses our custom icon instead of Anaconda pythonw / Spyder icon
+try:
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("google.antigravity.controlcenter.pro.v1")
+except Exception:
+    pass
+
+try:
+    from antigravity_switcher import subagent_tracker, mcp_supervisor
+except ImportError:
+    import subagent_tracker
+    import mcp_supervisor
+
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
 if sys.stderr is None:
@@ -535,8 +547,16 @@ HTML_INTERFACE = """<!DOCTYPE html>
   </div>
 
   <!-- Navigation Tabs -->
-  <nav class="flex border-b border-hairline px-5 gap-6 text-xs shrink-0 bg-surface-2/40">
+  <nav class="flex border-b border-hairline px-5 gap-5 text-xs shrink-0 bg-surface-2/40">
     <div role="button" onclick="setTab('accounts')" id="tab-accounts" class="py-2.5 font-medium border-b-2 border-accent text-white transition-all cursor-pointer">Accounts</div>
+    <div role="button" onclick="setTab('subagents')" id="tab-subagents" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5">
+      <span>Subagent DAG</span>
+      <span id="subagents-pulse-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 hidden"></span>
+    </div>
+    <div role="button" onclick="setTab('mcp')" id="tab-mcp" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5">
+      <span>MCP Matrix</span>
+      <span id="mcp-count-badge" class="px-1.5 py-0.2 bg-surface-3 rounded text-[10px] text-gray-400 font-mono">5</span>
+    </div>
     <div role="button" onclick="setTab('logs')" id="tab-logs" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer">Activity Logs</div>
     <div role="button" onclick="setTab('manage')" id="tab-manage" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer">Enroll Account</div>
   </nav>
@@ -548,6 +568,65 @@ HTML_INTERFACE = """<!DOCTYPE html>
     <div id="view-accounts" class="space-y-3.5">
       <div id="cards-container" class="space-y-3">
         <!-- Rendered via JS -->
+      </div>
+    </div>
+
+    <!-- Tab: Subagents DAG -->
+    <div id="view-subagents" class="hidden space-y-4">
+      <!-- Session Switcher Pills -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-[11px] text-gray-400">
+          <span>Recent Sessions</span>
+          <button onclick="fetchSubagents()" class="hover:text-white flex items-center gap-1 transition-colors">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
+          </button>
+        </div>
+        <div id="session-pills" class="flex gap-2 overflow-x-auto pb-1 font-mono text-[11px]">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Active Session Status Card -->
+      <div id="subagent-active-card" class="border border-hairline rounded-lg bg-surface p-4 space-y-3">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- DAG Tree Container -->
+      <div class="border border-hairline rounded-lg bg-surface p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-hairline pb-2.5">
+          <div class="flex items-center gap-2">
+            <i data-lucide="git-branch" class="w-4 h-4 text-accent"></i>
+            <span class="text-xs font-semibold text-white">Agent Execution DAG</span>
+          </div>
+          <span id="dag-node-count" class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-2 text-gray-400 border border-hairline">1 Node</span>
+        </div>
+
+        <div id="dag-tree-content" class="space-y-3">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: MCP Matrix -->
+    <div id="view-mcp" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-xs font-semibold text-white">Model Context Protocol (MCP) Servers</h3>
+          <p class="text-[11px] text-gray-400">Supervises local tools and stdio JSON-RPC connections</p>
+        </div>
+        <button onclick="fetchMcp()" class="h-7 px-3 rounded bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 text-xs flex items-center gap-1.5 transition-all">
+          <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <div id="mcp-cards-container" class="grid grid-cols-1 gap-3">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div class="border border-hairline rounded-lg bg-surface/50 p-3 text-[11px] text-gray-500 space-y-1">
+        <div class="font-medium text-gray-400">About MCP Stdio Lifecycle:</div>
+        <div>Antigravity lazy-loads MCP servers on-demand when an agent calls a relevant tool. If a server process terminates or hangs, use the <strong>Ping Probe</strong> or <strong>Restart</strong> button to reset it to a clean standby state.</div>
       </div>
     </div>
 
@@ -609,18 +688,330 @@ HTML_INTERFACE = """<!DOCTYPE html>
       best: null
     };
 
+    let currentTab = 'accounts';
+    let currentSelectedCid = null;
+    let subagentsPollingTimer = null;
+    let mcpPollingTimer = null;
+
     function setTab(tab) {
-      ['accounts', 'logs', 'manage'].forEach(t => {
-        document.getElementById('view-' + t).classList.add('hidden');
+      currentTab = tab;
+      ['accounts', 'subagents', 'mcp', 'logs', 'manage'].forEach(t => {
+        const el = document.getElementById('view-' + t);
+        if (el) el.classList.add('hidden');
         const btn = document.getElementById('tab-' + t);
-        btn.classList.remove('border-accent', 'text-white');
-        btn.classList.add('border-transparent', 'text-[#6E6E6E]');
+        if (btn) {
+          btn.classList.remove('border-accent', 'text-white');
+          btn.classList.add('border-transparent', 'text-[#6E6E6E]');
+        }
       });
-      document.getElementById('view-' + tab).classList.remove('hidden');
+      const activeView = document.getElementById('view-' + tab);
+      if (activeView) activeView.classList.remove('hidden');
       const activeBtn = document.getElementById('tab-' + tab);
-      activeBtn.classList.remove('border-transparent', 'text-[#6E6E6E]');
-      activeBtn.classList.add('border-accent', 'text-white');
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-[#6E6E6E]');
+        activeBtn.classList.add('border-accent', 'text-white');
+      }
+
+      if (subagentsPollingTimer) clearInterval(subagentsPollingTimer);
+      if (mcpPollingTimer) clearInterval(mcpPollingTimer);
+
+      if (tab === 'subagents') {
+        fetchSubagents(currentSelectedCid);
+        subagentsPollingTimer = setInterval(() => {
+          if (currentTab === 'subagents') fetchSubagents(currentSelectedCid);
+        }, 3500);
+      } else if (tab === 'mcp') {
+        fetchMcp();
+        mcpPollingTimer = setInterval(() => {
+          if (currentTab === 'mcp') fetchMcp();
+        }, 8000);
+      }
       lucide.createIcons();
+    }
+
+    async function fetchSubagents(cid = null) {
+      try {
+        const url = cid ? `/api/subagents?cid=${encodeURIComponent(cid)}` : '/api/subagents';
+        const res = await fetch(url);
+        const data = await res.json();
+        renderSubagents(data);
+      } catch (e) {
+        console.error("Error fetching subagents:", e);
+      }
+    }
+
+    function renderSubagents(data) {
+      if (!data || !data.active_session) return;
+      const s = data.active_session;
+      currentSelectedCid = s.id;
+
+      // Pulse dot in tab
+      const pulseDot = document.getElementById('subagents-pulse-dot');
+      if (pulseDot) {
+        if (s.status === 'RUNNING') pulseDot.classList.remove('hidden');
+        else pulseDot.classList.add('hidden');
+      }
+
+      // Render Session Pills
+      const pillsContainer = document.getElementById('session-pills');
+      if (pillsContainer) {
+        pillsContainer.innerHTML = '';
+        (data.sessions || []).forEach(sess => {
+          const isSel = sess.id === s.id;
+          const btn = document.createElement('button');
+          btn.onclick = () => fetchSubagents(sess.id);
+          btn.className = `px-2.5 py-1 rounded text-[11px] border transition-all shrink-0 flex items-center gap-1.5 ${
+            isSel
+              ? 'bg-accent/15 border-accent text-white font-medium'
+              : 'bg-surface border-hairline text-gray-400 hover:text-white hover:border-gray-700'
+          }`;
+          btn.innerHTML = `<span>${sess.id.substring(0, 8)}...</span><span class="text-[10px] text-gray-500">${sess.last_active}</span>`;
+          pillsContainer.appendChild(btn);
+        });
+      }
+
+      // Render Active Session Card
+      let statusBadge = '';
+      if (s.status === 'RUNNING') {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center gap-1.5 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> RUNNING</span>`;
+      } else if (s.status === 'STUCK') {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-red-950/60 border border-red-800 text-red-400 flex items-center gap-1.5 font-bold"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> STUCK (>60s)</span>`;
+      } else if (s.status === 'WAITING') {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950/60 border border-amber-800 text-amber-400 font-medium">WAITING</span>`;
+      } else {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-surface-2 border border-hairline text-gray-400 font-mono">IDLE</span>`;
+      }
+
+      let toolHtml = '<span class="text-gray-500 italic">No recent tool call</span>';
+      if (s.last_tool) {
+        toolHtml = `
+          <div class="flex items-center gap-2 bg-surface-2 border border-hairline px-2.5 py-1.5 rounded font-mono text-[11px]">
+            <span class="text-accent font-semibold">${s.last_tool.name}</span>
+            <span class="text-gray-400 truncate">${s.last_tool.summary || s.last_tool.action || ''}</span>
+          </div>
+        `;
+      }
+
+      const activeCard = document.getElementById('subagent-active-card');
+      if (activeCard) {
+        activeCard.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="space-y-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Active Task</span>
+                <span class="text-[11px] font-mono text-gray-500">ID: ${s.id.substring(0, 13)}...</span>
+              </div>
+              <h4 class="text-xs font-semibold text-white truncate">${s.prompt}</h4>
+            </div>
+            <div>${statusBadge}</div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 pt-1 border-t border-hairline/60 text-center font-mono text-[11px]">
+            <div class="bg-surface-2/60 border border-hairline rounded p-1.5">
+              <div class="text-[10px] text-gray-500 uppercase">Steps</div>
+              <div class="text-white font-semibold">${s.total_steps}</div>
+            </div>
+            <div class="bg-surface-2/60 border border-hairline rounded p-1.5">
+              <div class="text-[10px] text-gray-500 uppercase">Est. Tokens</div>
+              <div class="text-accent font-semibold">${s.estimated_tokens.toLocaleString()}</div>
+            </div>
+            <div class="bg-surface-2/60 border border-hairline rounded p-1.5">
+              <div class="text-[10px] text-gray-500 uppercase">Last Step</div>
+              <div class="text-gray-300 font-semibold">${s.last_active}</div>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Latest Execution</span>
+            ${toolHtml}
+          </div>
+        `;
+      }
+
+      // Render DAG Tree
+      const subCount = (data.subagents || []).length;
+      const countEl = document.getElementById('dag-node-count');
+      if (countEl) countEl.textContent = `${1 + subCount} Nodes`;
+      const treeContainer = document.getElementById('dag-tree-content');
+      if (treeContainer) {
+        treeContainer.innerHTML = '';
+
+        // Parent Node
+        const parentNode = document.createElement('div');
+        parentNode.className = 'border border-hairline rounded-md bg-surface-2 p-3 space-y-1.5';
+        parentNode.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded bg-accent/20 border border-accent/40 flex items-center justify-center text-accent">
+                <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-white">Parent Orchestrator Agent</div>
+                <div class="text-[10px] font-mono text-gray-500">Model: Active | Primary Loop</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono text-gray-400 bg-surface px-2 py-0.5 rounded border border-hairline">Step ${s.total_steps}</span>
+          </div>
+        `;
+        treeContainer.appendChild(parentNode);
+
+        // Subagent Nodes
+        if (subCount > 0) {
+          data.subagents.forEach((sa, idx) => {
+            const isSaRunning = sa.status === 'RUNNING';
+            const branch = document.createElement('div');
+            branch.className = 'ml-5 pl-4 border-l-2 border-hairline-strong relative space-y-2';
+            branch.innerHTML = `
+              <div class="border border-hairline rounded-md bg-surface p-3 space-y-2 hover:border-gray-700 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                      <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold text-white">${sa.role || 'Subagent'}</div>
+                      <div class="text-[10px] font-mono text-gray-500">Type: ${sa.type} | Model: ${sa.model}</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono ${
+                    isSaRunning
+                      ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-medium'
+                      : 'bg-surface-2 border border-hairline text-gray-400'
+                  }">${sa.status}</span>
+                </div>
+                <div class="bg-surface-2/60 border border-hairline/60 rounded p-2 text-[11px] text-gray-300 font-mono leading-relaxed truncate">
+                  "${sa.prompt}"
+                </div>
+              </div>
+            `;
+            treeContainer.appendChild(branch);
+          });
+        } else {
+          const emptyNotice = document.createElement('div');
+          emptyNotice.className = 'ml-5 pl-4 border-l-2 border-hairline-strong py-2';
+          emptyNotice.innerHTML = `
+            <div class="border border-dashed border-hairline rounded p-3 text-center text-gray-500 text-xs">
+              Direct single-agent orchestration active. Subagents will branch here automatically when <code>invoke_subagent</code> is executed.
+            </div>
+          `;
+          treeContainer.appendChild(emptyNotice);
+        }
+      }
+
+      lucide.createIcons();
+    }
+
+    async function fetchMcp() {
+      try {
+        const res = await fetch('/api/mcp');
+        const list = await res.json();
+        renderMcp(list);
+      } catch (e) {
+        console.error("Error fetching MCP matrix:", e);
+      }
+    }
+
+    function renderMcp(list) {
+      if (!Array.isArray(list)) return;
+      const countBadge = document.getElementById('mcp-count-badge');
+      if (countBadge) countBadge.textContent = list.length;
+      const container = document.getElementById('mcp-cards-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      list.forEach(item => {
+        const isOnline = item.status === 'ONLINE';
+        const card = document.createElement('div');
+        card.className = 'border border-hairline rounded-lg bg-surface p-4 space-y-3';
+        
+        let statusBadge = isOnline
+          ? `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center gap-1 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ONLINE</span>`
+          : `<span class="px-2 py-0.5 rounded text-[10px] bg-surface-2 border border-hairline text-gray-400 font-mono">STANDBY</span>`;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded bg-surface-2 border border-hairline flex items-center justify-center text-accent">
+                <i data-lucide="plug" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-semibold text-white font-mono">${item.name}</h4>
+                <div class="text-[10px] font-mono text-gray-500 truncate max-w-xs">${item.preview_cmd}</div>
+              </div>
+            </div>
+            <div>${statusBadge}</div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 border-t border-hairline/60 pt-2 font-mono text-[11px]">
+            <div class="bg-surface-2/60 border border-hairline rounded p-1.5 text-center">
+              <div class="text-[10px] text-gray-500 uppercase">PID</div>
+              <div class="text-gray-300">${item.pid || '-'}</div>
+            </div>
+            <div class="bg-surface-2/60 border border-hairline rounded p-1.5 text-center">
+              <div class="text-[10px] text-gray-500 uppercase">RAM</div>
+              <div class="${item.memory_mb > 0 ? 'text-emerald-400 font-semibold' : 'text-gray-400'}">${item.memory_mb > 0 ? item.memory_mb + ' MB' : '-'}</div>
+            </div>
+            <div class="bg-surface-2/60 border border-hairline rounded p-1.5 text-center">
+              <div class="text-[10px] text-gray-500 uppercase">Uptime</div>
+              <div class="text-gray-300">${item.uptime}</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <div id="mcp-ping-result-${item.name}" class="text-[11px] font-mono text-gray-400">
+              Stdio JSON-RPC Ready
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="pingMcp('${item.name}')" id="btn-ping-${item.name}" class="h-6 px-2.5 rounded bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 hover:text-white text-[11px] flex items-center gap-1 transition-all">
+                <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i>
+                <span>Ping Probe</span>
+              </button>
+              <button onclick="restartMcp('${item.name}')" class="h-6 px-2.5 rounded bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 hover:text-white text-[11px] flex items-center gap-1 transition-all">
+                <i data-lucide="rotate-ccw" class="w-3 h-3 text-gray-400"></i>
+                <span>Restart</span>
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    async function pingMcp(name) {
+      const resLabel = document.getElementById(`mcp-ping-result-${name}`);
+      if (resLabel) resLabel.innerHTML = `<span class="text-amber-400 animate-pulse">Probing JSON-RPC...</span>`;
+      try {
+        const res = await fetch('/api/mcp/ping', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ name })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (resLabel) resLabel.innerHTML = `<span class="text-emerald-400 font-semibold">⚡ ${data.latency_ms}ms (Responsive)</span>`;
+        } else {
+          if (resLabel) resLabel.innerHTML = `<span class="text-red-400 font-semibold truncate max-w-xs" title="${data.error || 'Timeout'}">Probe failed</span>`;
+        }
+      } catch (e) {
+        if (resLabel) resLabel.innerHTML = `<span class="text-red-400">Network error</span>`;
+      }
+    }
+
+    async function restartMcp(name) {
+      if (confirm(`Terminate and reset MCP server [${name}] to clean standby?`)) {
+        try {
+          await fetch('/api/mcp/restart', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name })
+          });
+          setTimeout(fetchMcp, 500);
+        } catch (e) {
+          console.error(e);
+        }
+      }
     }
 
     async function fetchStatus(forceSpinner = false) {
@@ -955,6 +1346,29 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data_bytes)))
             self.end_headers()
             self.wfile.write(data_bytes)
+        elif self.path == "/api/subagents" or self.path.startswith("/api/subagents"):
+            query_cid = None
+            if "?" in self.path:
+                try:
+                    params = urllib.parse.parse_qs(self.path.split("?")[1])
+                    query_cid = params.get("cid", [None])[0]
+                except Exception:
+                    pass
+            dag_data = subagent_tracker.parse_conversation_dag(query_cid)
+            data_bytes = json.dumps(dag_data).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data_bytes)))
+            self.end_headers()
+            self.wfile.write(data_bytes)
+        elif self.path == "/api/mcp":
+            mcp_data = mcp_supervisor.get_mcp_matrix()
+            data_bytes = json.dumps(mcp_data).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data_bytes)))
+            self.end_headers()
+            self.wfile.write(data_bytes)
         elif self.path == "/app_icon.png":
             if os.path.exists(ICON_PNG):
                 png_bytes = open(ICON_PNG, "rb").read()
@@ -1048,6 +1462,26 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(resp_bytes)))
             self.end_headers()
             self.wfile.write(resp_bytes)
+
+        elif self.path == "/api/mcp/ping":
+            server_name = req_data.get("name")
+            res = mcp_supervisor.ping_mcp_server(server_name) if server_name else {"success": False, "error": "Missing name"}
+            resp_bytes = json.dumps(res).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
+
+        elif self.path == "/api/mcp/restart":
+            server_name = req_data.get("name")
+            res = mcp_supervisor.restart_mcp_server(server_name) if server_name else {"success": False, "error": "Missing name"}
+            resp_bytes = json.dumps(res).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
         else:
             self.send_response(404)
             self.end_headers()
@@ -1132,16 +1566,58 @@ def start_local_server():
         except OSError:
             continue
 
+def apply_dark_titlebar(hwnd):
+    try:
+        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+        DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+        DWMWA_BORDER_COLOR = 34
+        DWMWA_CAPTION_COLOR = 35
+        DWMWA_TEXT_COLOR = 36
+
+        dwm = ctypes.windll.dwmapi
+        user32 = ctypes.windll.user32
+
+        # 1. Force Windows Immersive Dark Mode
+        val = ctypes.c_int(1)
+        r = dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_USE_IMMERSIVE_DARK_MODE), ctypes.byref(val), ctypes.sizeof(val))
+        if r != 0:
+            dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1), ctypes.byref(val), ctypes.sizeof(val))
+
+        # 2. Windows 11 Titlebar Caption Color: Obsidian #101010 (COLORREF BGR 0x00101010)
+        caption_color = ctypes.c_int(0x00101010)
+        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_CAPTION_COLOR), ctypes.byref(caption_color), ctypes.sizeof(caption_color))
+
+        # 3. Windows 11 Titlebar Text Color: Crisp Silver/White #FFFFFF (COLORREF 0x00FFFFFF)
+        text_color = ctypes.c_int(0x00FFFFFF)
+        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_TEXT_COLOR), ctypes.byref(text_color), ctypes.sizeof(text_color))
+
+        # 4. Windows 11 Hairline Window Border: Dark #222222 (COLORREF 0x00222222)
+        border_color = ctypes.c_int(0x00222222)
+        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_BORDER_COLOR), ctypes.byref(border_color), ctypes.sizeof(border_color))
+
+        # 5. Force Desktop Window Manager (DWM) to immediately repaint non-client frame
+        SWP_FRAMECHANGED = 0x0020
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_NOACTIVATE = 0x0010
+        user32.SetWindowPos(wintypes.HWND(hwnd), 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+    except Exception:
+        pass
+
 # --- Desktop Window Host ---
 class AntigravityProWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Antigravity Control Center")
-        self.resize(580, 720)
-        self.setMinimumSize(520, 600)
+        self.resize(680, 780)
+        self.setMinimumSize(600, 680)
         
-        if os.path.exists(ICON_PNG):
-            self.setWindowIcon(QIcon(ICON_PNG))
+        apply_dark_titlebar(int(self.winId()))
+
+        icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
+        if icon_to_use:
+            self.setWindowIcon(icon_to_use)
 
         self.browser = QWebEngineView(self)
         self.browser.page().setBackgroundColor(QtGui.QColor("#101010"))
@@ -1155,8 +1631,9 @@ class AntigravityProWindow(QMainWindow):
             return
             
         self.tray_icon = QSystemTrayIcon(self)
-        if os.path.exists(ICON_PNG):
-            self.tray_icon.setIcon(QIcon(ICON_PNG))
+        icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
+        if icon_to_use:
+            self.tray_icon.setIcon(icon_to_use)
             
         menu = QMenu()
         menu.setStyleSheet("""
@@ -1204,6 +1681,11 @@ class AntigravityProWindow(QMainWindow):
         self.show()
         self.setWindowState(self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
         self.activateWindow()
+        apply_dark_titlebar(int(self.winId()))
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        apply_dark_titlebar(int(self.winId()))
 
     def closeEvent(self, event):
         if QSystemTrayIcon.isSystemTrayAvailable():
@@ -1244,11 +1726,17 @@ def main():
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
+    icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
+    if icon_to_use:
+        app.setWindowIcon(icon_to_use)
     
     win = AntigravityProWindow()
     win.show()
     win.raise_()
     win.activateWindow()
+    apply_dark_titlebar(int(win.winId()))
+    QTimer.singleShot(50, lambda: apply_dark_titlebar(int(win.winId())))
+    QTimer.singleShot(250, lambda: apply_dark_titlebar(int(win.winId())))
     
     sys.exit(app.exec_())
 

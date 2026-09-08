@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
   <img src="assets/icons/app_icon.png" width="96" height="96" alt="Antigravity Control Center Logo">
 
@@ -51,6 +51,17 @@ Rather than forcing developers to manually log out, restart applications, or int
   - **Claude & GPT Models** (5-Hour Window & Weekly Quota)
   - **Dynamic Reset Deltas** (e.g., `3h 48m`, `5d 12h`)
 - Algorithmic score ranking that automatically flags the optimal backup account with a `Recommended` badge and enables a 1-click quick-switch action.
+
+### 🌲 Live Subagent DAG & Execution Trace
+- Real-time hierarchical visualization of active conversation threads: Parent Orchestrator $\rightarrow$ Child Subagents.
+- Tailing telemetry on `transcript.jsonl`: Step counter, live tool execution chips (`tool_calls`), and estimated token burn rates.
+- Deadlock / Unresponsive detection: Flags agents that stall for $>60$ seconds with quick-access session switching across recent conversation IDs.
+
+### 🔌 MCP Server Matrix & Health Supervisor
+- Auto-discovers local Model Context Protocol servers configured in `~/.gemini/config/mcp_config.json` (`Roblox_Studio`, `Excel_Cowork`, `Google_Slides`, `Blender`, `MS_Project`).
+- Real-time Windows process inspection via `psutil`: PID, RAM RSS (MB), CPU%, and uptime.
+- **1-Click Ping Probe**: Tests stdio JSON-RPC handshake responsiveness (`initialize` probe) with exact latency measurement in milliseconds.
+- **1-Click Server Restart**: Kills zombie processes and resets stdio pipelines to clean standby.
 
 ### 🖤 Antigravity Native Obsidian Design
 - Precision UI adhering 1:1 to official Antigravity dark obsidian design tokens:
