@@ -34,11 +34,12 @@ if sys.stderr is None:
     sys.stderr = open(os.devnull, "w")
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QTimer, QUrl, QSize
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt, QTimer, QUrl, QSize, QPoint
+from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QSystemTrayIcon, QMenu, QMessageBox, QAction
+    QApplication, QMainWindow, QSystemTrayIcon, QMenu, QMessageBox, QAction,
+    QWidget, QHBoxLayout, QLabel, QPushButton
 )
 
 if getattr(sys, 'frozen', False):
@@ -504,13 +505,22 @@ HTML_INTERFACE = """<!DOCTYPE html>
 </head>
 <body class="font-sans antialiased overflow-hidden flex flex-col h-screen select-none bg-canvas text-[#CCCCCC]">
 
-  <!-- Header -->
-  <header class="h-14 border-b border-hairline bg-surface-2 px-5 flex items-center justify-between shrink-0">
-    <div class="flex items-center gap-3">
-      <img src="/app_icon.png" alt="Antigravity" class="w-6 h-6 object-contain drop-shadow-[0_2px_8px_rgba(43,127,255,0.35)]">
-      <div class="flex items-baseline gap-2">
-        <span class="font-semibold text-sm tracking-tight text-[#E2E8F0]">Antigravity</span>
-        <span class="text-[10px] font-mono uppercase tracking-wider text-[#9D9D9D] bg-surface-3 px-1.5 py-0.5 rounded border border-hairline">Switcher</span>
+  <!-- Unified Mission Control Toolbar -->
+  <div class="h-11 border-b border-hairline bg-surface-2 px-4 flex items-center justify-between shrink-0 text-xs">
+    <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-1.5 text-[#9D9D9D]">
+        <span class="text-[#6E6E6E]">Active:</span>
+        <span id="current-active-email" class="font-medium text-[#E2E8F0]">Loading...</span>
+        <span class="text-[#333333]">•</span>
+        <span id="total-accounts-count" class="text-[#6E6E6E]">0 accounts</span>
+      </div>
+      
+      <!-- Quick Recommendation Button -->
+      <div id="quick-rec-box" class="hidden pl-2 border-l border-hairline/60">
+        <button id="btn-quick-rec" onclick="switchRecommended()" class="text-[11px] font-medium text-accent hover:text-accent-hover flex items-center gap-1 transition-colors cursor-pointer">
+          <span>Switch to recommended</span>
+          <i data-lucide="arrow-right" class="w-3 h-3"></i>
+        </button>
       </div>
     </div>
 
@@ -522,26 +532,8 @@ HTML_INTERFACE = """<!DOCTYPE html>
       </button>
 
       <!-- Refresh Button -->
-      <button onclick="fetchStatus(true)" class="h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-white hover:border-hairline-strong flex items-center justify-center transition-all cursor-pointer">
+      <button onclick="fetchStatus(true)" title="Refresh metrics" class="h-7 w-7 rounded-md border border-hairline bg-surface-3 text-[#9D9D9D] hover:text-white hover:border-hairline-strong flex items-center justify-center transition-all cursor-pointer">
         <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
-      </button>
-    </div>
-  </header>
-
-  <!-- Sub-Header Status Strip -->
-  <div class="bg-surface-2/80 border-b border-hairline px-5 py-2 flex items-center justify-between text-xs shrink-0">
-    <div class="flex items-center gap-2 text-[#9D9D9D]">
-      <span class="text-[#6E6E6E]">Active:</span>
-      <span id="current-active-email" class="font-medium text-[#E2E8F0]">Loading...</span>
-      <span class="text-[#333333]">•</span>
-      <span id="total-accounts-count" class="text-[#6E6E6E]">0 accounts</span>
-    </div>
-    
-    <!-- Quick Recommendation Button -->
-    <div id="quick-rec-box" class="hidden">
-      <button id="btn-quick-rec" onclick="switchRecommended()" class="text-[11px] font-medium text-accent hover:text-accent-hover flex items-center gap-1 transition-colors cursor-pointer">
-        <span>Switch to recommended</span>
-        <i data-lucide="arrow-right" class="w-3 h-3"></i>
       </button>
     </div>
   </div>
@@ -1566,54 +1558,211 @@ def start_local_server():
         except OSError:
             continue
 
-def apply_dark_titlebar(hwnd):
+def apply_dwm_frameless_styling(hwnd):
     try:
-        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-        DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
-        DWMWA_BORDER_COLOR = 34
-        DWMWA_CAPTION_COLOR = 35
-        DWMWA_TEXT_COLOR = 36
-
         dwm = ctypes.windll.dwmapi
-        user32 = ctypes.windll.user32
-
-        # 1. Force Windows Immersive Dark Mode
-        val = ctypes.c_int(1)
-        r = dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_USE_IMMERSIVE_DARK_MODE), ctypes.byref(val), ctypes.sizeof(val))
-        if r != 0:
-            dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1), ctypes.byref(val), ctypes.sizeof(val))
-
-        # 2. Windows 11 Titlebar Caption Color: Obsidian #101010 (COLORREF BGR 0x00101010)
-        caption_color = ctypes.c_int(0x00101010)
-        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_CAPTION_COLOR), ctypes.byref(caption_color), ctypes.sizeof(caption_color))
-
-        # 3. Windows 11 Titlebar Text Color: Crisp Silver/White #FFFFFF (COLORREF 0x00FFFFFF)
-        text_color = ctypes.c_int(0x00FFFFFF)
-        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_TEXT_COLOR), ctypes.byref(text_color), ctypes.sizeof(text_color))
-
-        # 4. Windows 11 Hairline Window Border: Dark #222222 (COLORREF 0x00222222)
+        # Windows 11 rounded corners: DWMWA_WINDOW_CORNER_PREFERENCE = 33 (DWMWCP_ROUND = 2)
+        corner = ctypes.c_int(2)
+        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(33), ctypes.byref(corner), ctypes.sizeof(corner))
+        # Hairline obsidian border: DWMWA_BORDER_COLOR = 34 (0x00222222)
         border_color = ctypes.c_int(0x00222222)
-        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(DWMWA_BORDER_COLOR), ctypes.byref(border_color), ctypes.sizeof(border_color))
-
-        # 5. Force Desktop Window Manager (DWM) to immediately repaint non-client frame
-        SWP_FRAMECHANGED = 0x0020
-        SWP_NOMOVE = 0x0002
-        SWP_NOSIZE = 0x0001
-        SWP_NOZORDER = 0x0004
-        SWP_NOACTIVATE = 0x0010
-        user32.SetWindowPos(wintypes.HWND(hwnd), 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+        dwm.DwmSetWindowAttribute(wintypes.HWND(hwnd), wintypes.DWORD(34), ctypes.byref(border_color), ctypes.sizeof(border_color))
     except Exception:
         pass
+
+# --- Desktop 1:1 Antigravity 2.0 Custom TitleBar ---
+class AntigravityProTitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(32)
+        self.setObjectName("antigravity_titlebar")
+        self.setStyleSheet("""
+            QWidget#antigravity_titlebar {
+                background-color: #131313;
+                border-bottom: 1px solid #222222;
+            }
+            QLabel {
+                color: #8C8C8C;
+                font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+                font-size: 12px;
+                background: transparent;
+            }
+            QLabel#brand {
+                color: #FAFAFA;
+                font-weight: 600;
+                font-size: 12px;
+                padding-right: 12px;
+            }
+            QLabel#badge {
+                color: #388BFD;
+                background-color: rgba(56, 139, 253, 0.12);
+                border: 1px solid rgba(56, 139, 253, 0.3);
+                border-radius: 4px;
+                padding: 1px 6px;
+                font-size: 10px;
+                font-family: 'JetBrains Mono', Consolas, monospace;
+                font-weight: 500;
+                margin-left: 6px;
+            }
+            QPushButton.menu-btn {
+                background: transparent;
+                border: none;
+                color: #CCCCCC;
+                font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+                font-size: 12px;
+                padding: 0 8px;
+                height: 32px;
+            }
+            QPushButton.menu-btn:hover {
+                background-color: #222222;
+                color: #FFFFFF;
+            }
+            QPushButton.menu-btn::menu-indicator {
+                image: none;
+            }
+            QPushButton.win-btn {
+                background: transparent;
+                border: none;
+                color: #CCCCCC;
+                font-family: 'Segoe UI', system-ui, sans-serif;
+                font-size: 11px;
+                width: 46px;
+                height: 32px;
+            }
+            QPushButton.win-btn:hover {
+                background-color: #262626;
+                color: #FFFFFF;
+            }
+            QPushButton#btnClose:hover {
+                background-color: #E81123;
+                color: #FFFFFF;
+            }
+            QMenu {
+                background-color: #191919;
+                color: #E2E8F0;
+                border: 1px solid #222222;
+                border-radius: 6px;
+                padding: 4px;
+                font-family: 'Segoe UI', system-ui, sans-serif;
+                font-size: 12px;
+            }
+            QMenu::item {
+                padding: 6px 16px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #272727;
+                color: #FFFFFF;
+            }
+        """)
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 0, 0, 0)
+        layout.setSpacing(0)
+        
+        # 1. Antigravity Logo
+        icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
+        if icon_to_use:
+            lbl_ico = QLabel(self)
+            lbl_ico.setPixmap(icon_to_use.pixmap(16, 16))
+            lbl_ico.setStyleSheet("margin-right: 8px;")
+            layout.addWidget(lbl_ico)
+            
+        # 2. Antigravity Brand Text
+        lbl_brand = QLabel("Antigravity", self)
+        lbl_brand.setObjectName("brand")
+        layout.addWidget(lbl_brand)
+        
+        # 3. Application Menus (File, View, Window)
+        self.btn_file = QPushButton("File", self)
+        self.btn_file.setProperty("class", "menu-btn")
+        m_file = QMenu(self)
+        act_sync = m_file.addAction("Sync Credentials")
+        act_sync.triggered.connect(self.sync_creds)
+        m_file.addSeparator()
+        act_quit = m_file.addAction("Quit Application")
+        act_quit.triggered.connect(QApplication.instance().quit)
+        self.btn_file.setMenu(m_file)
+        layout.addWidget(self.btn_file)
+        
+        self.btn_view = QPushButton("View", self)
+        self.btn_view.setProperty("class", "menu-btn")
+        m_view = QMenu(self)
+        m_view.addAction("Accounts Radar").triggered.connect(lambda: self.switch_view("accounts"))
+        m_view.addAction("Subagent DAG").triggered.connect(lambda: self.switch_view("subagents"))
+        m_view.addAction("MCP Matrix").triggered.connect(lambda: self.switch_view("mcp"))
+        m_view.addAction("Activity Logs").triggered.connect(lambda: self.switch_view("logs"))
+        m_view.addAction("Enroll Account").triggered.connect(lambda: self.switch_view("manage"))
+        m_view.addSeparator()
+        m_view.addAction("Reload Window").triggered.connect(lambda: self.window().browser.reload() if hasattr(self.window(), "browser") else None)
+        self.btn_view.setMenu(m_view)
+        layout.addWidget(self.btn_view)
+
+        self.btn_window = QPushButton("Window", self)
+        self.btn_window.setProperty("class", "menu-btn")
+        m_window = QMenu(self)
+        m_window.addAction("Minimize").triggered.connect(lambda: self.window().showMinimized())
+        m_window.addAction("Toggle Maximize").triggered.connect(self.toggle_max)
+        m_window.addSeparator()
+        m_window.addAction("Hide to System Tray").triggered.connect(lambda: self.window().hide())
+        self.btn_window.setMenu(m_window)
+        layout.addWidget(self.btn_window)
+
+        # 4. Control Center Pill
+        lbl_badge = QLabel("CONTROL CENTER", self)
+        lbl_badge.setObjectName("badge")
+        layout.addWidget(lbl_badge)
+        
+        # 5. Drag region stretcher
+        layout.addStretch()
+        
+        # 6. Window Controls (Minimize, Maximize, Close)
+        self.btn_min = QPushButton("—", self)
+        self.btn_min.setProperty("class", "win-btn")
+        self.btn_min.clicked.connect(lambda: self.window().showMinimized())
+        layout.addWidget(self.btn_min)
+        
+        self.btn_max = QPushButton("□", self)
+        self.btn_max.setProperty("class", "win-btn")
+        self.btn_max.clicked.connect(self.toggle_max)
+        layout.addWidget(self.btn_max)
+        
+        self.btn_close = QPushButton("✕", self)
+        self.btn_close.setProperty("class", "win-btn")
+        self.btn_close.setObjectName("btnClose")
+        self.btn_close.clicked.connect(lambda: self.window().close())
+        layout.addWidget(self.btn_close)
+
+    def toggle_max(self):
+        win = self.window()
+        if win.isMaximized():
+            win.showNormal()
+            self.btn_max.setText("□")
+        else:
+            win.showMaximized()
+            self.btn_max.setText("❐")
+
+    def sync_creds(self):
+        win = self.window()
+        if hasattr(win, "browser"):
+            win.browser.page().runJavaScript("if (typeof fetchStatus === 'function') fetchStatus(true);")
+
+    def switch_view(self, tab_name):
+        win = self.window()
+        if hasattr(win, "browser"):
+            win.browser.page().runJavaScript(f"if (typeof setTab === 'function') setTab('{tab_name}');")
 
 # --- Desktop Window Host ---
 class AntigravityProWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Antigravity Control Center")
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         self.resize(680, 780)
         self.setMinimumSize(600, 680)
         
-        apply_dark_titlebar(int(self.winId()))
+        self.titlebar = AntigravityProTitleBar(self)
+        self.setMenuWidget(self.titlebar)
 
         icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
         if icon_to_use:
@@ -1625,6 +1774,51 @@ class AntigravityProWindow(QMainWindow):
         self.browser.load(QUrl(f"http://127.0.0.1:{ACTUAL_PORT}"))
         
         self.init_tray()
+
+    def nativeEvent(self, eventType, message):
+        msg = wintypes.MSG.from_address(message.__int__())
+        if msg.message == 0x0084:  # WM_NCHITTEST
+            x = msg.lParam & 0xFFFF
+            if x > 32767: x -= 65536
+            y = (msg.lParam >> 16) & 0xFFFF
+            if y > 32767: y -= 65536
+            
+            p = self.mapFromGlobal(QPoint(x, y))
+            w = self.width()
+            h = self.height()
+            border = 6
+            
+            left = p.x() < border
+            right = p.x() > w - border
+            top = p.y() < border
+            bottom = p.y() > h - border
+            
+            if top and left: return True, 13     # HTTOPLEFT
+            if top and right: return True, 14    # HTTOPRIGHT
+            if bottom and left: return True, 16  # HTBOTTOMLEFT
+            if bottom and right: return True, 17 # HTBOTTOMRIGHT
+            if left: return True, 10             # HTLEFT
+            if right: return True, 11            # HTRIGHT
+            if bottom: return True, 15           # HTBOTTOM
+            if top: return True, 12              # HTTOP
+            
+            # Titlebar drag region
+            if p.y() < 32:
+                child = self.childAt(p)
+                if isinstance(child, QPushButton):
+                    return False, 0 # Let Qt handle button clicks
+                return True, 2      # HTCAPTION (native window drag + snap)
+                
+        return super().nativeEvent(eventType, message)
+
+    def changeEvent(self, event):
+        if event.type() == QtCore.QEvent.WindowStateChange:
+            if hasattr(self, "titlebar"):
+                if self.isMaximized():
+                    self.titlebar.btn_max.setText("❐")
+                else:
+                    self.titlebar.btn_max.setText("□")
+        super().changeEvent(event)
 
     def init_tray(self):
         if not QSystemTrayIcon.isSystemTrayAvailable():
@@ -1681,11 +1875,11 @@ class AntigravityProWindow(QMainWindow):
         self.show()
         self.setWindowState(self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
         self.activateWindow()
-        apply_dark_titlebar(int(self.winId()))
+        apply_dwm_frameless_styling(int(self.winId()))
 
     def showEvent(self, event):
         super().showEvent(event)
-        apply_dark_titlebar(int(self.winId()))
+        apply_dwm_frameless_styling(int(self.winId()))
 
     def closeEvent(self, event):
         if QSystemTrayIcon.isSystemTrayAvailable():
@@ -1734,9 +1928,8 @@ def main():
     win.show()
     win.raise_()
     win.activateWindow()
-    apply_dark_titlebar(int(win.winId()))
-    QTimer.singleShot(50, lambda: apply_dark_titlebar(int(win.winId())))
-    QTimer.singleShot(250, lambda: apply_dark_titlebar(int(win.winId())))
+    apply_dwm_frameless_styling(int(win.winId()))
+    QTimer.singleShot(50, lambda: apply_dwm_frameless_styling(int(win.winId())))
     
     sys.exit(app.exec_())
 
