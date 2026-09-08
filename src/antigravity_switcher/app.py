@@ -105,6 +105,7 @@ CLIENT_SECRET = bytes([b ^ _K for b in _SEC_B]).decode("utf-8")
 CRED_TARGET = "gemini:antigravity"
 LOCAL_SERVER_INSTANCE = None
 ACTUAL_PORT = 28795
+WINDOW_INSTANCE = None
 
 # Windows Credential Manager API
 advapi32 = ctypes.windll.advapi32
@@ -501,9 +502,187 @@ HTML_INTERFACE = """<!DOCTYPE html>
       outline: none;
       cursor: pointer;
     }
+    .topbar-btn {
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 5px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: #9D9D9D;
+      background: transparent;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.1s ease, color 0.1s ease;
+      outline: none;
+    }
+    .topbar-btn:hover, .topbar-btn.active {
+      background-color: #2D2D2D;
+      color: #FAFAFA;
+    }
+    .topbar-btn:focus {
+      outline: none;
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: 27px;
+      left: 0;
+      background-color: #181818;
+      border: 1px solid #282828;
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      padding: 4px;
+      z-index: 9999;
+      min-width: 180px;
+    }
+    .dropdown-item {
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      color: #CCCCCC;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.08s ease, color 0.08s ease;
+    }
+    .dropdown-item:hover {
+      background-color: #282828;
+      color: #FFFFFF;
+    }
+    .dropdown-sep {
+      height: 1px;
+      background-color: #262626;
+      margin: 4px 0;
+    }
+    .shortcut {
+      font-size: 10px;
+      color: #6E6E6E;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+    }
+    .win-btn {
+      height: 30px;
+      width: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #9D9D9D;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.1s ease, color 0.1s ease;
+      outline: none;
+    }
+    .win-btn:hover {
+      background-color: #2D2D2D;
+      color: #FAFAFA;
+    }
+    .win-btn-close:hover {
+      background-color: #E81123 !important;
+      color: #FFFFFF !important;
+    }
   </style>
 </head>
 <body class="font-sans antialiased overflow-hidden flex flex-col h-screen select-none bg-canvas text-[#CCCCCC]">
+
+  <!-- Antigravity 2.0 1:1 Seamless Obsidian Top Bar -->
+  <div class="h-[30px] bg-[#161616] border-b border-[#222222] flex items-center justify-between shrink-0 select-none text-xs z-50">
+    <!-- Left: Brand & Menus -->
+    <div class="flex items-center h-full pl-2.5 gap-1 select-none">
+      <img src="/app_icon.png" class="w-4 h-4 mr-1 select-none pointer-events-none" onerror="this.style.display='none'">
+      <span class="text-xs font-medium text-[#FAFAFA] tracking-tight mr-1.5 select-none">Antigravity</span>
+      
+      <!-- File Menu -->
+      <div class="relative">
+        <button type="button" onclick="toggleMenu('file')" onmouseenter="hoverMenu('file')" id="menu-btn-file" class="topbar-btn">File</button>
+        <div id="menu-dropdown-file" class="dropdown-menu hidden">
+          <div onclick="syncCreds(); closeAllMenus();" class="dropdown-item">
+            <span>Sync Credentials</span>
+            <span class="shortcut">F5</span>
+          </div>
+          <div class="dropdown-sep"></div>
+          <div onclick="windowClose(); closeAllMenus();" class="dropdown-item">
+            <span>Hide to System Tray</span>
+            <span class="shortcut">Esc</span>
+          </div>
+          <div onclick="windowQuit(); closeAllMenus();" class="dropdown-item hover:!bg-[#E81123]">
+            <span>Quit Application</span>
+            <span class="shortcut">Alt+F4</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- View Menu -->
+      <div class="relative">
+        <button type="button" onclick="toggleMenu('view')" onmouseenter="hoverMenu('view')" id="menu-btn-view" class="topbar-btn">View</button>
+        <div id="menu-dropdown-view" class="dropdown-menu hidden">
+          <div onclick="selectTabAndClose('accounts')" class="dropdown-item">
+            <span>Accounts Radar</span>
+          </div>
+          <div onclick="selectTabAndClose('subagents')" class="dropdown-item">
+            <span>Subagent DAG</span>
+          </div>
+          <div onclick="selectTabAndClose('mcp')" class="dropdown-item">
+            <span>MCP Matrix</span>
+          </div>
+          <div onclick="selectTabAndClose('logs')" class="dropdown-item">
+            <span>Activity Logs</span>
+          </div>
+          <div onclick="selectTabAndClose('manage')" class="dropdown-item">
+            <span>Enroll Account</span>
+          </div>
+          <div class="dropdown-sep"></div>
+          <div onclick="window.location.reload()" class="dropdown-item">
+            <span>Reload Window</span>
+            <span class="shortcut">Ctrl+R</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Window Menu -->
+      <div class="relative">
+        <button type="button" onclick="toggleMenu('window')" onmouseenter="hoverMenu('window')" id="menu-btn-window" class="topbar-btn">Window</button>
+        <div id="menu-dropdown-window" class="dropdown-menu hidden">
+          <div onclick="windowMinimize(); closeAllMenus();" class="dropdown-item">
+            <span>Minimize</span>
+          </div>
+          <div onclick="windowMaximize(); closeAllMenus();" class="dropdown-item">
+            <span>Toggle Maximize</span>
+          </div>
+          <div class="dropdown-sep"></div>
+          <div onclick="windowClose(); closeAllMenus();" class="dropdown-item">
+            <span>Hide to System Tray</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Badge Pill -->
+      <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-accent bg-accent/10 border border-accent/20 tracking-wider">CONTROL CENTER</span>
+    </div>
+
+    <!-- Center Drag Region -->
+    <div class="flex-1 h-full cursor-default select-none" style="-webkit-app-region: drag;"></div>
+
+    <!-- Right: Window Controls (1:1 Windows 11 / Antigravity 2.0) -->
+    <div class="flex items-center h-full shrink-0 select-none">
+      <button onclick="windowMinimize()" title="Minimize" class="win-btn">
+        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+      </button>
+      <button id="btn-win-max" onclick="windowMaximize()" title="Maximize" class="win-btn">
+        <svg id="svg-win-max" width="10" height="10" viewBox="0 0 10 10"><path d="M1 1v8h8V1H1zm1 1h6v6H2V2z" fill="currentColor"/></svg>
+        <svg id="svg-win-restore" class="hidden" width="10" height="10" viewBox="0 0 10 10"><path d="M3 1v2H1v6h6V7h2V1H3zm3 7H2V4h4v4zm2-2h-1V3H4V2h4v4z" fill="currentColor"/></svg>
+      </button>
+      <button onclick="windowClose()" title="Close" class="win-btn win-btn-close">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
 
   <!-- Unified Mission Control Toolbar -->
   <div class="h-11 border-b border-hairline bg-surface-2 px-4 flex items-center justify-between shrink-0 text-xs">
@@ -1290,6 +1469,107 @@ HTML_INTERFACE = """<!DOCTYPE html>
       }
     }
 
+    // Top Bar & Menu Handlers (Antigravity 2.0 1:1)
+    let isMenuOpen = false;
+    let activeMenu = null;
+
+    function toggleMenu(name) {
+      if (activeMenu === name) {
+        closeAllMenus();
+      } else {
+        openMenu(name);
+      }
+    }
+
+    function hoverMenu(name) {
+      if (isMenuOpen && activeMenu !== name) {
+        openMenu(name);
+      }
+    }
+
+    function openMenu(name) {
+      closeAllMenus();
+      const dropdown = document.getElementById(`menu-dropdown-${name}`);
+      const btn = document.getElementById(`menu-btn-${name}`);
+      if (dropdown && btn) {
+        dropdown.classList.remove('hidden');
+        btn.classList.add('active');
+        activeMenu = name;
+        isMenuOpen = true;
+      }
+    }
+
+    function closeAllMenus() {
+      ['file', 'view', 'window'].forEach(m => {
+        const dropdown = document.getElementById(`menu-dropdown-${m}`);
+        const btn = document.getElementById(`menu-btn-${m}`);
+        if (dropdown) dropdown.classList.add('hidden');
+        if (btn) btn.classList.remove('active');
+      });
+      activeMenu = null;
+      isMenuOpen = false;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#menu-btn-file') && 
+          !e.target.closest('#menu-btn-view') && 
+          !e.target.closest('#menu-btn-window') && 
+          !e.target.closest('.dropdown-menu')) {
+        closeAllMenus();
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F5') {
+        e.preventDefault();
+        syncCreds();
+      } else if (e.key === 'Escape') {
+        if (isMenuOpen) {
+          closeAllMenus();
+        }
+      }
+    });
+
+    function selectTabAndClose(tabName) {
+      setTab(tabName);
+      closeAllMenus();
+    }
+
+    function syncCreds() {
+      fetchStatus(true);
+      closeAllMenus();
+    }
+
+    function windowMinimize() {
+      fetch('/api/window/minimize', { method: 'POST' }).catch(() => {});
+    }
+
+    function windowMaximize() {
+      fetch('/api/window/maximize', { method: 'POST' }).catch(() => {});
+    }
+
+    function windowClose() {
+      fetch('/api/window/close', { method: 'POST' }).catch(() => {});
+    }
+
+    function windowQuit() {
+      fetch('/api/window/quit', { method: 'POST' }).catch(() => {});
+    }
+
+    function setMaximizedState(isMax) {
+      const svgMax = document.getElementById('svg-win-max');
+      const svgRestore = document.getElementById('svg-win-restore');
+      if (svgMax && svgRestore) {
+        if (isMax) {
+          svgMax.classList.add('hidden');
+          svgRestore.classList.remove('hidden');
+        } else {
+          svgMax.classList.remove('hidden');
+          svgRestore.classList.add('hidden');
+        }
+      }
+    }
+
     if (state.accounts && state.accounts.length > 0) {
       renderUI();
     }
@@ -1474,6 +1754,50 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(resp_bytes)))
             self.end_headers()
             self.wfile.write(resp_bytes)
+
+        elif self.path == "/api/window/minimize":
+            if WINDOW_INSTANCE:
+                QtCore.QMetaObject.invokeMethod(WINDOW_INSTANCE, "showMinimized", QtCore.Qt.QueuedConnection)
+            resp_bytes = b'{"status":"ok"}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
+
+        elif self.path == "/api/window/maximize":
+            if WINDOW_INSTANCE:
+                def toggle_max():
+                    if WINDOW_INSTANCE.isMaximized():
+                        WINDOW_INSTANCE.showNormal()
+                    else:
+                        WINDOW_INSTANCE.showMaximized()
+                QtCore.QTimer.singleShot(0, toggle_max)
+            resp_bytes = b'{"status":"ok"}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
+
+        elif self.path == "/api/window/close":
+            if WINDOW_INSTANCE:
+                QtCore.QMetaObject.invokeMethod(WINDOW_INSTANCE, "close", QtCore.Qt.QueuedConnection)
+            resp_bytes = b'{"status":"ok"}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
+
+        elif self.path == "/api/window/quit":
+            QtCore.QTimer.singleShot(50, QApplication.instance().quit)
+            resp_bytes = b'{"status":"ok"}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
         else:
             self.send_response(404)
             self.end_headers()
@@ -1570,188 +1894,6 @@ def apply_dwm_frameless_styling(hwnd):
     except Exception:
         pass
 
-# --- Desktop 1:1 Antigravity 2.0 Custom TitleBar ---
-class AntigravityProTitleBar(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedHeight(32)
-        self.setObjectName("antigravity_titlebar")
-        self.setStyleSheet("""
-            QWidget#antigravity_titlebar {
-                background-color: #131313;
-                border-bottom: 1px solid #222222;
-            }
-            QLabel {
-                color: #8C8C8C;
-                font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-                font-size: 12px;
-                background: transparent;
-            }
-            QLabel#brand {
-                color: #FAFAFA;
-                font-weight: 600;
-                font-size: 12px;
-                padding-right: 12px;
-            }
-            QLabel#badge {
-                color: #388BFD;
-                background-color: rgba(56, 139, 253, 0.12);
-                border: 1px solid rgba(56, 139, 253, 0.3);
-                border-radius: 4px;
-                padding: 1px 6px;
-                font-size: 10px;
-                font-family: 'JetBrains Mono', Consolas, monospace;
-                font-weight: 500;
-                margin-left: 6px;
-            }
-            QPushButton.menu-btn {
-                background: transparent;
-                border: none;
-                color: #CCCCCC;
-                font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-                font-size: 12px;
-                padding: 0 8px;
-                height: 32px;
-            }
-            QPushButton.menu-btn:hover {
-                background-color: #222222;
-                color: #FFFFFF;
-            }
-            QPushButton.menu-btn::menu-indicator {
-                image: none;
-            }
-            QPushButton.win-btn {
-                background: transparent;
-                border: none;
-                color: #CCCCCC;
-                font-family: 'Segoe UI', system-ui, sans-serif;
-                font-size: 11px;
-                width: 46px;
-                height: 32px;
-            }
-            QPushButton.win-btn:hover {
-                background-color: #262626;
-                color: #FFFFFF;
-            }
-            QPushButton#btnClose:hover {
-                background-color: #E81123;
-                color: #FFFFFF;
-            }
-            QMenu {
-                background-color: #191919;
-                color: #E2E8F0;
-                border: 1px solid #222222;
-                border-radius: 6px;
-                padding: 4px;
-                font-family: 'Segoe UI', system-ui, sans-serif;
-                font-size: 12px;
-            }
-            QMenu::item {
-                padding: 6px 16px;
-                border-radius: 4px;
-            }
-            QMenu::item:selected {
-                background-color: #272727;
-                color: #FFFFFF;
-            }
-        """)
-        
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 0, 0, 0)
-        layout.setSpacing(0)
-        
-        # 1. Antigravity Logo
-        icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
-        if icon_to_use:
-            lbl_ico = QLabel(self)
-            lbl_ico.setPixmap(icon_to_use.pixmap(16, 16))
-            lbl_ico.setStyleSheet("margin-right: 8px;")
-            layout.addWidget(lbl_ico)
-            
-        # 2. Antigravity Brand Text
-        lbl_brand = QLabel("Antigravity", self)
-        lbl_brand.setObjectName("brand")
-        layout.addWidget(lbl_brand)
-        
-        # 3. Application Menus (File, View, Window)
-        self.btn_file = QPushButton("File", self)
-        self.btn_file.setProperty("class", "menu-btn")
-        m_file = QMenu(self)
-        act_sync = m_file.addAction("Sync Credentials")
-        act_sync.triggered.connect(self.sync_creds)
-        m_file.addSeparator()
-        act_quit = m_file.addAction("Quit Application")
-        act_quit.triggered.connect(QApplication.instance().quit)
-        self.btn_file.setMenu(m_file)
-        layout.addWidget(self.btn_file)
-        
-        self.btn_view = QPushButton("View", self)
-        self.btn_view.setProperty("class", "menu-btn")
-        m_view = QMenu(self)
-        m_view.addAction("Accounts Radar").triggered.connect(lambda: self.switch_view("accounts"))
-        m_view.addAction("Subagent DAG").triggered.connect(lambda: self.switch_view("subagents"))
-        m_view.addAction("MCP Matrix").triggered.connect(lambda: self.switch_view("mcp"))
-        m_view.addAction("Activity Logs").triggered.connect(lambda: self.switch_view("logs"))
-        m_view.addAction("Enroll Account").triggered.connect(lambda: self.switch_view("manage"))
-        m_view.addSeparator()
-        m_view.addAction("Reload Window").triggered.connect(lambda: self.window().browser.reload() if hasattr(self.window(), "browser") else None)
-        self.btn_view.setMenu(m_view)
-        layout.addWidget(self.btn_view)
-
-        self.btn_window = QPushButton("Window", self)
-        self.btn_window.setProperty("class", "menu-btn")
-        m_window = QMenu(self)
-        m_window.addAction("Minimize").triggered.connect(lambda: self.window().showMinimized())
-        m_window.addAction("Toggle Maximize").triggered.connect(self.toggle_max)
-        m_window.addSeparator()
-        m_window.addAction("Hide to System Tray").triggered.connect(lambda: self.window().hide())
-        self.btn_window.setMenu(m_window)
-        layout.addWidget(self.btn_window)
-
-        # 4. Control Center Pill
-        lbl_badge = QLabel("CONTROL CENTER", self)
-        lbl_badge.setObjectName("badge")
-        layout.addWidget(lbl_badge)
-        
-        # 5. Drag region stretcher
-        layout.addStretch()
-        
-        # 6. Window Controls (Minimize, Maximize, Close)
-        self.btn_min = QPushButton("—", self)
-        self.btn_min.setProperty("class", "win-btn")
-        self.btn_min.clicked.connect(lambda: self.window().showMinimized())
-        layout.addWidget(self.btn_min)
-        
-        self.btn_max = QPushButton("□", self)
-        self.btn_max.setProperty("class", "win-btn")
-        self.btn_max.clicked.connect(self.toggle_max)
-        layout.addWidget(self.btn_max)
-        
-        self.btn_close = QPushButton("✕", self)
-        self.btn_close.setProperty("class", "win-btn")
-        self.btn_close.setObjectName("btnClose")
-        self.btn_close.clicked.connect(lambda: self.window().close())
-        layout.addWidget(self.btn_close)
-
-    def toggle_max(self):
-        win = self.window()
-        if win.isMaximized():
-            win.showNormal()
-            self.btn_max.setText("□")
-        else:
-            win.showMaximized()
-            self.btn_max.setText("❐")
-
-    def sync_creds(self):
-        win = self.window()
-        if hasattr(win, "browser"):
-            win.browser.page().runJavaScript("if (typeof fetchStatus === 'function') fetchStatus(true);")
-
-    def switch_view(self, tab_name):
-        win = self.window()
-        if hasattr(win, "browser"):
-            win.browser.page().runJavaScript(f"if (typeof setTab === 'function') setTab('{tab_name}');")
-
 # --- Desktop Window Host ---
 class AntigravityProWindow(QMainWindow):
     def __init__(self):
@@ -1760,16 +1902,13 @@ class AntigravityProWindow(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         self.resize(680, 780)
         self.setMinimumSize(600, 680)
-        
-        self.titlebar = AntigravityProTitleBar(self)
-        self.setMenuWidget(self.titlebar)
 
         icon_to_use = QIcon(ICON_ICO) if os.path.exists(ICON_ICO) else (QIcon(ICON_PNG) if os.path.exists(ICON_PNG) else None)
         if icon_to_use:
             self.setWindowIcon(icon_to_use)
 
         self.browser = QWebEngineView(self)
-        self.browser.page().setBackgroundColor(QtGui.QColor("#101010"))
+        self.browser.page().setBackgroundColor(QtGui.QColor("#161616"))
         self.setCentralWidget(self.browser)
         self.browser.load(QUrl(f"http://127.0.0.1:{ACTUAL_PORT}"))
         
@@ -1802,22 +1941,22 @@ class AntigravityProWindow(QMainWindow):
             if bottom: return True, 15           # HTBOTTOM
             if top: return True, 12              # HTTOP
             
-            # Titlebar drag region
-            if p.y() < 32:
-                child = self.childAt(p)
-                if isinstance(child, QPushButton):
-                    return False, 0 # Let Qt handle button clicks
-                return True, 2      # HTCAPTION (native window drag + snap)
+            # Top bar drag & snap (height: 30px)
+            # Left interactive area: x < 330 (Logo, Brand, File, View, Window, Badge)
+            # Right interactive area: x > w - 142 (Min, Max, Close)
+            # Center region: 330 <= x <= (w - 142) -> HTCAPTION for native drag & snap
+            if border <= p.y() < 30:
+                if 330 <= p.x() <= (w - 142):
+                    return True, 2  # HTCAPTION
+                return False, 0
                 
         return super().nativeEvent(eventType, message)
 
     def changeEvent(self, event):
         if event.type() == QtCore.QEvent.WindowStateChange:
-            if hasattr(self, "titlebar"):
-                if self.isMaximized():
-                    self.titlebar.btn_max.setText("❐")
-                else:
-                    self.titlebar.btn_max.setText("□")
+            is_max = self.isMaximized()
+            if hasattr(self, "browser") and self.browser.page():
+                self.browser.page().runJavaScript(f"if (typeof setMaximizedState === 'function') setMaximizedState({str(is_max).lower()});")
         super().changeEvent(event)
 
     def init_tray(self):
@@ -1925,6 +2064,8 @@ def main():
         app.setWindowIcon(icon_to_use)
     
     win = AntigravityProWindow()
+    global WINDOW_INSTANCE
+    WINDOW_INSTANCE = win
     win.show()
     win.raise_()
     win.activateWindow()
