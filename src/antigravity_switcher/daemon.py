@@ -9,6 +9,11 @@ import urllib.request
 import urllib.parse
 from datetime import datetime
 
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
 # Base paths
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 USERPROFILE = os.environ.get("USERPROFILE", "")

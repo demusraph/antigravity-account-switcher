@@ -414,37 +414,66 @@ def is_autopilot_running():
     if not os.path.exists(AUTOPILOT_PID_FILE):
         return False, None
     try:
-        pid = int(open(AUTOPILOT_PID_FILE).read().strip())
+        with open(AUTOPILOT_PID_FILE, "r") as f:
+            pid_str = f.read().strip()
+        if not pid_str:
+            return False, None
+        pid = int(pid_str)
         handle = kernel32.OpenProcess(0x1000, False, pid)
         if handle:
+            exit_code = wintypes.DWORD()
+            if kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                if exit_code.value == 259:  # STILL_ACTIVE
+                    kernel32.CloseHandle(handle)
+                    return True, pid
             kernel32.CloseHandle(handle)
-            return True, pid
+        try:
+            os.remove(AUTOPILOT_PID_FILE)
+        except Exception:
+            pass
     except Exception:
         pass
     return False, None
 
 def set_autopilot_state(enable: bool):
-    running, pid = is_autopilot_running()
-    if enable and not running:
-        DETACHED_FLAGS = 0x00000008 | 0x00000200
-        if getattr(sys, 'frozen', False):
-            cmd = [sys.executable, "--daemon"]
-        else:
-            if not os.path.exists(DAEMON_SCRIPT):
-                return False
-            cmd = [sys.executable, DAEMON_SCRIPT]
-        proc = subprocess.Popen(cmd, creationflags=DETACHED_FLAGS, close_fds=True)
-        with open(AUTOPILOT_PID_FILE, "w") as f:
-            f.write(str(proc.pid))
-        return True
-    elif not enable and running:
-        try:
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
-        except Exception:
-            pass
-        if os.path.exists(AUTOPILOT_PID_FILE):
-            os.remove(AUTOPILOT_PID_FILE)
-        return True
+    try:
+        running, pid = is_autopilot_running()
+        if enable and not running:
+            DETACHED_FLAGS = 0x00000008 | 0x00000200
+            if getattr(sys, 'frozen', False):
+                cmd = [sys.executable, "--daemon"]
+                cwd = os.path.dirname(sys.executable)
+            else:
+                main_py = os.path.join(_REPO_DIR, "main.py")
+                daemon_py = os.path.join(_CURR_DIR, "daemon.py")
+                if os.path.exists(main_py):
+                    cmd = [sys.executable, main_py, "--daemon"]
+                    cwd = _REPO_DIR
+                elif os.path.exists(daemon_py):
+                    cmd = [sys.executable, daemon_py]
+                    cwd = _CURR_DIR
+                else:
+                    cmd = [sys.executable, "-m", "antigravity_switcher.daemon"]
+                    cwd = _REPO_DIR
+
+            proc = subprocess.Popen(cmd, cwd=cwd, creationflags=DETACHED_FLAGS, close_fds=True)
+            with open(AUTOPILOT_PID_FILE, "w") as f:
+                f.write(str(proc.pid))
+            return True
+        elif not enable and running:
+            try:
+                subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
+            except Exception:
+                pass
+            if os.path.exists(AUTOPILOT_PID_FILE):
+                try:
+                    os.remove(AUTOPILOT_PID_FILE)
+                except Exception:
+                    pass
+            return True
+    except Exception:
+        log_exception(*sys.exc_info())
+        return False
     return True
 
 # --- HTML / Tailwind Linear Interface ---
@@ -604,19 +633,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       color: #FFFFFF !important;
     }
 
-    /* React Bits Motion & Polish Layer */
-    .shiny-text {
-      background: linear-gradient(120deg, rgba(255,255,255,0.7) 25%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.7) 75%);
-      background-size: 200% 100%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: shine 5s linear infinite;
-    }
-    @keyframes shine {
-      0% { background-position: 150% }
-      100% { background-position: -150% }
-    }
-
+    /* Motion & Polish Layer */
     .spotlight-card {
       position: relative;
       overflow: hidden;
@@ -689,8 +706,6 @@ HTML_INTERFACE = """<!DOCTYPE html>
   </style>
 </head>
 <body class="font-sans antialiased overflow-hidden flex flex-col h-screen select-none bg-canvas text-[#CCCCCC]">
-  <!-- ClickSpark 2D Canvas Layer (React Bits) -->
-  <canvas id="click-spark-canvas" class="pointer-events-none fixed inset-0 z-[999999] w-full h-full"></canvas>
 
   <!-- Antigravity 2.0 1:1 Seamless Obsidian Top Bar with Clear Hierarchy -->
   <div class="h-[36px] bg-[#161616] border-b border-[#222222] flex items-center justify-between shrink-0 select-none text-xs z-50">
@@ -701,7 +716,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       
       <!-- Prominent Brand Hierarchy -->
       <div class="flex items-center gap-1.5 mr-3 select-none">
-        <span class="text-[13.5px] font-bold text-white tracking-tight shiny-text">Antigravity</span>
+        <span class="text-[13.5px] font-bold text-white tracking-tight">Antigravity</span>
         <span class="text-[13.5px] font-medium text-[#A3A3A3] tracking-tight">Control Center</span>
       </div>
 
@@ -973,76 +988,6 @@ HTML_INTERFACE = """<!DOCTYPE html>
     let currentSelectedCid = null;
     let subagentsPollingTimer = null;
     let mcpPollingTimer = null;
-
-    // --- React Bits: ClickSpark Canvas Engine ---
-    const sparkCanvas = document.getElementById('click-spark-canvas');
-    const sparkCtx = sparkCanvas ? sparkCanvas.getContext('2d') : null;
-    let sparks = [];
-
-    function resizeSparkCanvas() {
-      if (!sparkCanvas) return;
-      sparkCanvas.width = window.innerWidth;
-      sparkCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeSparkCanvas);
-    resizeSparkCanvas();
-
-    function triggerClickSpark(x, y, color = '#2B7FFF') {
-      if (!sparkCtx) return;
-      const count = 8;
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * (Math.PI * 2) + (Math.random() * 0.4 - 0.2);
-        const speed = 1.8 + Math.random() * 2.2;
-        sparks.push({
-          x, y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          size: 2.2 + Math.random() * 1.5,
-          alpha: 1,
-          color: color
-        });
-      }
-      if (sparks.length <= count) {
-        requestAnimationFrame(drawSparks);
-      }
-    }
-
-    function drawSparks() {
-      if (!sparkCtx || sparks.length === 0) return;
-      sparkCtx.clearRect(0, 0, sparkCanvas.width, sparkCanvas.height);
-      for (let i = sparks.length - 1; i >= 0; i--) {
-        const s = sparks[i];
-        s.x += s.vx;
-        s.y += s.vy;
-        s.vx *= 0.93;
-        s.vy *= 0.93;
-        s.alpha -= 0.045;
-        if (s.alpha <= 0) {
-          sparks.splice(i, 1);
-          continue;
-        }
-        sparkCtx.save();
-        sparkCtx.globalAlpha = Math.max(0, s.alpha);
-        sparkCtx.fillStyle = s.color;
-        sparkCtx.beginPath();
-        sparkCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-        sparkCtx.fill();
-        sparkCtx.restore();
-      }
-      if (sparks.length > 0) {
-        requestAnimationFrame(drawSparks);
-      }
-    }
-
-    document.addEventListener('pointerdown', (e) => {
-      const interactive = e.target.closest('button, [role="button"], .spotlight-card, .dropdown-item, a');
-      if (interactive) {
-        const isRed = interactive.classList.contains('win-btn-close') || (interactive.innerText && interactive.innerText.includes('Quit'));
-        const isGreen = interactive.id === 'btn-toggle-ap' && state.autopilot;
-        const color = isRed ? '#EF4444' : (isGreen ? '#10B981' : '#38BDF8');
-        triggerClickSpark(e.clientX, e.clientY, color);
-      }
-    });
 
     // --- React Bits: SpotlightCard Mouse Tracking ---
     function initSpotlightCards() {
@@ -1700,15 +1645,38 @@ HTML_INTERFACE = """<!DOCTYPE html>
     }
 
     async function toggleAutoPilot() {
+      const targetState = !state.autopilot;
+      const apDot = document.getElementById('ap-dot');
+      const apText = document.getElementById('ap-text');
+      const apBtn = document.getElementById('btn-toggle-ap');
+
+      if (targetState) {
+        if (apDot) apDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+        if (apText) apText.textContent = "Auto-Pilot: Starting...";
+        if (apBtn) apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-emerald-950/40 border-emerald-900 text-emerald-400";
+      } else {
+        if (apDot) apDot.className = "w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse";
+        if (apText) apText.textContent = "Auto-Pilot: Stopping...";
+        if (apBtn) apBtn.className = "btn-spring h-7 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-all bg-surface-2 border-hairline text-gray-400";
+      }
+
       try {
-        await fetch('/api/toggle-autopilot', {
+        const res = await fetch('/api/toggle-autopilot', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ enable: !state.autopilot })
+          body: JSON.stringify({ enable: targetState })
         });
-        setTimeout(fetchStatus, 500);
+        const data = await res.json();
+        if (data && typeof data.autopilot !== 'undefined') {
+          state.autopilot = data.autopilot;
+        } else {
+          state.autopilot = targetState;
+        }
+        renderUI();
+        setTimeout(() => fetchStatus(true), 400);
       } catch (e) {
-        console.error(e);
+        console.error("AutoPilot toggle error:", e);
+        fetchStatus(true);
       }
     }
 
@@ -1952,9 +1920,10 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         elif self.path == "/api/toggle-autopilot":
             enable = req_data.get("enable", True)
-            set_autopilot_state(enable)
+            success = set_autopilot_state(enable)
             LocalApiHandler.cached_status = None
-            resp_bytes = b'{"status":"ok"}'
+            is_running, _ = is_autopilot_running()
+            resp_bytes = json.dumps({"status": "ok" if success else "error", "autopilot": bool(is_running)}).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(resp_bytes)))
