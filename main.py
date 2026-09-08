@@ -1,8 +1,13 @@
-﻿"""
+"""
 Antigravity Control Center - Root Launcher
 """
 import os
 import sys
+
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
 
 # Ensure src/ is in sys.path
 root_dir = os.path.dirname(os.path.abspath(__file__))

@@ -21,6 +21,7 @@ if %ERRORLEVEL% equ 0 (
 
 :: 3. Check Anaconda / Miniconda paths
 if exist "%USERPROFILE%\anaconda3\pythonw.exe" (
+    set "PATH=%USERPROFILE%\anaconda3;%USERPROFILE%\anaconda3\Library\mingw-w64\bin;%USERPROFILE%\anaconda3\Library\usr\bin;%USERPROFILE%\anaconda3\Library\bin;%USERPROFILE%\anaconda3\Scripts;%PATH%"
     start "" "%USERPROFILE%\anaconda3\pythonw.exe" "%TARGET_SCRIPT%"
     exit /b 0
 )

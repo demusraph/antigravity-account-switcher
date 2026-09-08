@@ -1,5 +1,30 @@
 import os
 import sys
+import traceback
+from datetime import datetime, timezone
+
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
+USERPROFILE = os.environ.get("USERPROFILE", "")
+APPDATA = os.environ.get("APPDATA", "")
+LOCALAPPDATA = os.environ.get("LOCALAPPDATA", "")
+SWITCHER_DIR = os.path.join(USERPROFILE, ".gemini", "antigravity-switcher")
+
+def log_exception(exc_type, exc_value, exc_traceback):
+    try:
+        os.makedirs(SWITCHER_DIR, exist_ok=True)
+        log_path = os.path.join(SWITCHER_DIR, "app_crash.log")
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"\n--- CRASH AT {datetime.now()} ---\n")
+            traceback.print_exception(exc_type, exc_value, exc_traceback, file=f)
+    except Exception:
+        pass
+
+sys.excepthook = log_exception
+
 import re
 import json
 import sqlite3
@@ -13,7 +38,6 @@ from ctypes import wintypes
 import urllib.request
 import urllib.parse
 from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
-from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
 # Set explicit Windows AppUserModelID so Taskbar uses our custom icon instead of Anaconda pythonw / Spyder icon
@@ -27,11 +51,6 @@ try:
 except ImportError:
     import subagent_tracker
     import mcp_supervisor
-
-if sys.stdout is None:
-    sys.stdout = open(os.devnull, "w")
-if sys.stderr is None:
-    sys.stderr = open(os.devnull, "w")
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QTimer, QUrl, QSize, QPoint
@@ -48,21 +67,6 @@ if getattr(sys, 'frozen', False):
 else:
     BUNDLE_DIR = os.path.dirname(os.path.abspath(__file__))
     APP_DIR = BUNDLE_DIR
-
-USERPROFILE = os.environ.get("USERPROFILE", "")
-APPDATA = os.environ.get("APPDATA", "")
-LOCALAPPDATA = os.environ.get("LOCALAPPDATA", "")
-SWITCHER_DIR = os.path.join(USERPROFILE, ".gemini", "antigravity-switcher")
-
-def log_exception(exc_type, exc_value, exc_traceback):
-    import traceback
-    os.makedirs(SWITCHER_DIR, exist_ok=True)
-    log_path = os.path.join(SWITCHER_DIR, "app_crash.log")
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(f"\n--- CRASH AT {datetime.now()} ---\n")
-        traceback.print_exception(exc_type, exc_value, exc_traceback, file=f)
-
-sys.excepthook = log_exception
 
 # --- Paths ---
 ANTIGRAV_ROAMING = os.path.join(APPDATA, "Antigravity")
@@ -529,7 +533,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
     }
     .dropdown-menu {
       position: absolute;
-      top: 27px;
+      top: 31px;
       left: 0;
       background-color: #181818;
       border: 1px solid #282828;
@@ -567,7 +571,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       font-family: 'JetBrains Mono', Consolas, monospace;
     }
     .win-btn {
-      height: 30px;
+      height: 36px;
       width: 46px;
       display: inline-flex;
       align-items: center;
@@ -591,73 +595,85 @@ HTML_INTERFACE = """<!DOCTYPE html>
 </head>
 <body class="font-sans antialiased overflow-hidden flex flex-col h-screen select-none bg-canvas text-[#CCCCCC]">
 
-  <!-- Antigravity 2.0 1:1 Seamless Obsidian Top Bar -->
-  <div class="h-[30px] bg-[#161616] border-b border-[#222222] flex items-center justify-between shrink-0 select-none text-xs z-50">
-    <!-- Left: Brand & Menus -->
-    <div class="flex items-center h-full pl-2.5 gap-1 select-none">
-      <img src="/app_icon.png" class="w-4 h-4 mr-1.5 select-none pointer-events-none" onerror="this.style.display='none'">
-      <span class="text-xs font-semibold text-[#FAFAFA] tracking-tight mr-2 select-none">Antigravity Control Center</span>
+  <!-- Antigravity 2.0 1:1 Seamless Obsidian Top Bar with Clear Hierarchy -->
+  <div class="h-[36px] bg-[#161616] border-b border-[#222222] flex items-center justify-between shrink-0 select-none text-xs z-50">
+    <!-- Left: Brand Identity & Menus -->
+    <div class="flex items-center h-full pl-3 select-none">
+      <!-- Enriched 20px Logo -->
+      <img src="/app_icon.png" class="w-[20px] h-[20px] mr-2.5 select-none pointer-events-none drop-shadow-sm" onerror="this.style.display='none'">
       
-      <!-- File Menu -->
-      <div class="relative">
-        <button type="button" onclick="toggleMenu('file')" onmouseenter="hoverMenu('file')" id="menu-btn-file" class="topbar-btn">File</button>
-        <div id="menu-dropdown-file" class="dropdown-menu hidden">
-          <div onclick="syncCreds(); closeAllMenus();" class="dropdown-item">
-            <span>Sync Credentials</span>
-            <span class="shortcut">F5</span>
-          </div>
-          <div class="dropdown-sep"></div>
-          <div onclick="windowClose(); closeAllMenus();" class="dropdown-item">
-            <span>Hide to System Tray</span>
-            <span class="shortcut">Esc</span>
-          </div>
-          <div onclick="windowQuit(); closeAllMenus();" class="dropdown-item hover:!bg-[#E81123]">
-            <span>Quit Application</span>
-            <span class="shortcut">Alt+F4</span>
-          </div>
-        </div>
+      <!-- Prominent Brand Hierarchy -->
+      <div class="flex items-center gap-1.5 mr-3 select-none">
+        <span class="text-[13.5px] font-bold text-white tracking-tight">Antigravity</span>
+        <span class="text-[13.5px] font-medium text-[#A3A3A3] tracking-tight">Control Center</span>
       </div>
 
-      <!-- View Menu -->
-      <div class="relative">
-        <button type="button" onclick="toggleMenu('view')" onmouseenter="hoverMenu('view')" id="menu-btn-view" class="topbar-btn">View</button>
-        <div id="menu-dropdown-view" class="dropdown-menu hidden">
-          <div onclick="selectTabAndClose('accounts')" class="dropdown-item">
-            <span>Accounts Radar</span>
-          </div>
-          <div onclick="selectTabAndClose('subagents')" class="dropdown-item">
-            <span>Subagent DAG</span>
-          </div>
-          <div onclick="selectTabAndClose('mcp')" class="dropdown-item">
-            <span>MCP Matrix</span>
-          </div>
-          <div onclick="selectTabAndClose('logs')" class="dropdown-item">
-            <span>Activity Logs</span>
-          </div>
-          <div onclick="selectTabAndClose('manage')" class="dropdown-item">
-            <span>Enroll Account</span>
-          </div>
-          <div class="dropdown-sep"></div>
-          <div onclick="window.location.reload()" class="dropdown-item">
-            <span>Reload Window</span>
-            <span class="shortcut">Ctrl+R</span>
+      <!-- Subtle Divider -->
+      <div class="h-3.5 w-px bg-[#262626] mr-2.5 select-none"></div>
+
+      <!-- Menu Items -->
+      <div class="flex items-center gap-0.5">
+        <!-- File Menu -->
+        <div class="relative">
+          <button type="button" onclick="toggleMenu('file')" onmouseenter="hoverMenu('file')" id="menu-btn-file" class="topbar-btn">File</button>
+          <div id="menu-dropdown-file" class="dropdown-menu hidden">
+            <div onclick="syncCreds(); closeAllMenus();" class="dropdown-item">
+              <span>Sync Credentials</span>
+              <span class="shortcut">F5</span>
+            </div>
+            <div class="dropdown-sep"></div>
+            <div onclick="windowClose(); closeAllMenus();" class="dropdown-item">
+              <span>Hide to System Tray</span>
+              <span class="shortcut">Esc</span>
+            </div>
+            <div onclick="windowQuit(); closeAllMenus();" class="dropdown-item hover:!bg-[#E81123]">
+              <span>Quit Application</span>
+              <span class="shortcut">Alt+F4</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Window Menu -->
-      <div class="relative">
-        <button type="button" onclick="toggleMenu('window')" onmouseenter="hoverMenu('window')" id="menu-btn-window" class="topbar-btn">Window</button>
-        <div id="menu-dropdown-window" class="dropdown-menu hidden">
-          <div onclick="windowMinimize(); closeAllMenus();" class="dropdown-item">
-            <span>Minimize</span>
+        <!-- View Menu -->
+        <div class="relative">
+          <button type="button" onclick="toggleMenu('view')" onmouseenter="hoverMenu('view')" id="menu-btn-view" class="topbar-btn">View</button>
+          <div id="menu-dropdown-view" class="dropdown-menu hidden">
+            <div onclick="selectTabAndClose('accounts')" class="dropdown-item">
+              <span>Accounts Radar</span>
+            </div>
+            <div onclick="selectTabAndClose('subagents')" class="dropdown-item">
+              <span>Subagent DAG</span>
+            </div>
+            <div onclick="selectTabAndClose('mcp')" class="dropdown-item">
+              <span>MCP Matrix</span>
+            </div>
+            <div onclick="selectTabAndClose('logs')" class="dropdown-item">
+              <span>Activity Logs</span>
+            </div>
+            <div onclick="selectTabAndClose('manage')" class="dropdown-item">
+              <span>Enroll Account</span>
+            </div>
+            <div class="dropdown-sep"></div>
+            <div onclick="window.location.reload()" class="dropdown-item">
+              <span>Reload Window</span>
+              <span class="shortcut">Ctrl+R</span>
+            </div>
           </div>
-          <div onclick="windowMaximize(); closeAllMenus();" class="dropdown-item">
-            <span>Toggle Maximize</span>
-          </div>
-          <div class="dropdown-sep"></div>
-          <div onclick="windowClose(); closeAllMenus();" class="dropdown-item">
-            <span>Hide to System Tray</span>
+        </div>
+
+        <!-- Window Menu -->
+        <div class="relative">
+          <button type="button" onclick="toggleMenu('window')" onmouseenter="hoverMenu('window')" id="menu-btn-window" class="topbar-btn">Window</button>
+          <div id="menu-dropdown-window" class="dropdown-menu hidden">
+            <div onclick="windowMinimize(); closeAllMenus();" class="dropdown-item">
+              <span>Minimize</span>
+            </div>
+            <div onclick="windowMaximize(); closeAllMenus();" class="dropdown-item">
+              <span>Toggle Maximize</span>
+            </div>
+            <div class="dropdown-sep"></div>
+            <div onclick="windowClose(); closeAllMenus();" class="dropdown-item">
+              <span>Hide to System Tray</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1879,12 +1895,6 @@ def start_local_server():
 
 def apply_dwm_frameless_styling(hwnd):
     try:
-        user32 = ctypes.windll.user32
-        style = user32.GetWindowLongW(hwnd, -16) # GWL_STYLE
-        # WS_MAXIMIZEBOX = 0x00010000, WS_MINIMIZEBOX = 0x00020000, WS_THICKFRAME = 0x00040000
-        style |= 0x00010000 | 0x00020000 | 0x00040000
-        user32.SetWindowLongW(hwnd, -16, style)
-
         dwm = ctypes.windll.dwmapi
         # Windows 11 rounded corners: DWMWA_WINDOW_CORNER_PREFERENCE = 33 (DWMWCP_ROUND = 2)
         corner = ctypes.c_int(2)
@@ -1945,8 +1955,8 @@ class AntigravityProWindow(QMainWindow):
             
             # If window is currently maximized, disable resize borders
             if self.isMaximized():
-                if p.y() < 30:
-                    if 300 <= p.x() <= (w - 140):
+                if p.y() < 36:
+                    if 380 <= p.x() <= (w - 140):
                         return True, 2  # HTCAPTION (double click to restore / drag to unmaximize)
                     return False, 0
                 return False, 0
@@ -1965,12 +1975,17 @@ class AntigravityProWindow(QMainWindow):
             if right: return True, 11                       # HTRIGHT
             if bottom: return True, 15                      # HTBOTTOM
             
-            # Top bar interaction (0 <= y < 30)
-            if p.y() < 30:
-                if 300 <= p.x() <= (w - 140):
+            # Top bar interaction (0 <= y < 36)
+            if p.y() < 36:
+                if 380 <= p.x() <= (w - 140):
                     return True, 2  # HTCAPTION (native drag & snap & double-click maximize)
                 return False, 0
                 
+        elif msg.message == 0x00A3:  # WM_NCLBUTTONDBLCLK
+            if msg.wParam == 2:  # HTCAPTION
+                self.on_toggle_max()
+                return True, 0
+
         return super().nativeEvent(eventType, message)
 
     def changeEvent(self, event):
