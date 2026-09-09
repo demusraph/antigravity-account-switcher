@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.2] - 2026-09-08
+
+### Fixed
+- **Anti-Wrapping Layout Hardening**: Enforced strict `whitespace-nowrap` and `shrink-0` across all Mission Control Toolbar items (Auto-Pilot toggle button, account count badge, quick recommendation action, and navigation tabs), completely eliminating ugly multi-line text wrapping on narrow viewports.
+- **Responsive Active Email Truncation**: Added responsive CSS truncation (`truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px]`) with dynamic `title` tooltip so long email addresses never push neighboring control buttons into awkward line-breaks.
+- **Window Geometry Optimization**: Expanded default window proportions from `680x780` to an ergonomic `840x800` (minimum `660x680`) with updated restore fallback geometry and fine-tuned Win32 `HTCAPTION` hit-test boundaries for flawless high-DPI Windows display scaling (125%-150%).
+
+---
+
+## [1.2.1] - 2026-09-08
+
+### Fixed
+- **Auto-Pilot Daemon Toggle Lifecycle**: Fixed `NameError` path resolution bug in `set_autopilot_state()` with dynamic entrypoint discovery (`main.py --daemon` / `daemon.py` / `-m antigravity_switcher.daemon`).
+- **Realtime Win32 Process Validation**: Replaced naive PID file checks with `kernel32.GetExitCodeProcess == 259 (STILL_ACTIVE)` and automated stale PID cleanup.
+- **Headless Stream Guard**: Added fallback redirection for `sys.stdout` and `sys.stderr` to `os.devnull` in `daemon.py` when executed via `pythonw.exe`.
+- **Clean Typography & Effect Removal**: Removed ShinyText gradient shimmer animation from the topbar brand name, restoring solid crisp `#FFFFFF` white typography; purged ClickSpark canvas particle engine from the DOM.
+
+---
+
+## [1.2.0] - 2026-09-08
+
+### Added
+- **PyQt5 Window Physics Animations**: Implemented `QPropertyAnimation` easing for window maximize (`OutCubic`, 220ms), minimize opacity fade (`InQuad`, 140ms), and tray restore fade-in (`OutQuad`, 160ms) to eliminate abrupt jumping on Windows 11 frameless windows.
+- **React Bits Micro-Interactions**: Integrated `SpotlightCard` cursor-following radial glow on account & DAG cards, `DecryptedText` cyber scramble on email initialization, `CountUp` smooth quota number animations, `ButtonSpring` tactile haptics, and `TabAnimatedEnter` view transitions.
+- **1:1 Antigravity 2.0 Obsidian Window Frame**: Removed white frameless border artifact with DWM dark mode attribute synchronization (`DWMWA_USE_IMMERSIVE_DARK_MODE`, `DWMWA_WINDOW_CORNER_PREFERENCE`).
+
+---
+
 ## [1.1.0] - 2026-09-08
 
 ### Added
