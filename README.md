@@ -7,8 +7,9 @@
   **Autonomous Multi-Account Orchestrator, Quota Radar & Overnight Task Continuity**
 
   [![Release](https://img.shields.io/github/v/release/demusraph/antigravity-account-switcher?style=flat-square&color=2B7FFF)](https://github.com/demusraph/antigravity-account-switcher/releases)
+  [![Version](https://img.shields.io/badge/Version-v1.2.2-blue?style=flat-square)](CHANGELOG.md)
   [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=flat-square&logo=windows&logoColor=white)](https://microsoft.com)
-  [![macOS Roadmap](https://img.shields.io/badge/macOS-Planned%20v1.1.0-orange?style=flat-square&logo=apple&logoColor=white)](#-roadmap)
+  [![macOS Roadmap](https://img.shields.io/badge/macOS-Planned%20v1.3.0-orange?style=flat-square&logo=apple&logoColor=white)](#-roadmap)
   [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
   [![Design System](https://img.shields.io/badge/Design%20System-Obsidian%20Dark%20(%23101010)-101010?style=flat-square)](#-antigravity-native-obsidian-design)
   [![Security](https://img.shields.io/badge/Security-Local%20DPAPI%20%7C%20Zero%20Cloud-10B981?style=flat-square)](SECURITY.md)
@@ -44,6 +45,7 @@ Rather than forcing developers to manually log out, restart applications, or int
   3. Hot-swaps the active OS credentials in milliseconds.
   4. Interfaces with the local **Chrome DevTools Protocol (CDP)** endpoint to automatically trigger task resumption—enabling autonomous, uninterrupted overnight agent runs while you sleep.
   5. Emits unobtrusive native Windows toast notifications upon state transitions.
+- **Hardened Lifecycle & Stale PID Auto-Cleanup**: Dynamic runner auto-discovery (`main.py --daemon` / `daemon.py` / `-m antigravity_switcher.daemon`), real-time Win32 `GetExitCodeProcess == 259 (STILL_ACTIVE)` verification, non-console stream redirection to `os.devnull` under `pythonw.exe`, and automated PID lock removal.
 
 ### 📊 Real-Time Multi-Account Quota Radar
 - Live telemetry calculation querying official OAuth endpoints for:
@@ -62,6 +64,24 @@ Rather than forcing developers to manually log out, restart applications, or int
 - Real-time Windows process inspection via `psutil`: PID, RAM RSS (MB), CPU%, and uptime.
 - **1-Click Ping Probe**: Tests stdio JSON-RPC handshake responsiveness (`initialize` probe) with exact latency measurement in milliseconds.
 - **1-Click Server Restart**: Kills zombie processes and resets stdio pipelines to clean standby.
+
+### 🪟 Native Window Physics & React Bits Micro-Interactions (v1.2.0)
+- **PyQt5 Window Physics Easing**: Eliminates abrupt jumping on Windows 11 frameless windows using `QPropertyAnimation`:
+  - **Maximize / Restore**: 220ms `QEasingCurve.OutCubic` geometry interpolation honoring the Windows Taskbar.
+  - **Minimize**: 140ms `QEasingCurve.InQuad` opacity fade before minimization.
+  - **Tray Restore**: 160ms `QEasingCurve.OutQuad` fade-in upon activation.
+  - **Morphing Window Controls**: Smooth SVG rotation and scale animation on maximize/restore toggling.
+- **Curated React Bits Matrix**:
+  - `SpotlightCard`: Dynamic mouse-tracking radial glow following your cursor across obsidian surfaces.
+  - `DecryptedText`: Cyber scramble decoding effect upon switching accounts.
+  - `CountUp`: Smooth number counting for quota percentages.
+  - `ButtonSpring`: Tactile spring bounce (`cubic-bezier(0.34, 1.56, 0.64, 1)`) on interactive controls.
+  - `TabAnimatedEnter`: Vertical slide and fade-in transitions across views.
+
+### 📐 Responsive Mission Control Toolbar & Ergonomic Sizing (v1.2.2)
+- **Anti-Wrapping Layout Hardening**: Strict `whitespace-nowrap` and `shrink-0` architecture across all status badges, recommendation actions, Auto-Pilot toggle buttons, and navigation tabs—permanently eliminating awkward multi-line text wrapping on narrow viewports.
+- **Dynamic Active Email Truncation**: Responsive CSS ellipsis truncation (`truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px]`) with interactive hover tooltip displaying full identity.
+- **High-DPI Desktop Geometry**: Default proportions expanded to **`840 x 800`** (minimum `660 x 680`) with fine-tuned Win32 `HTCAPTION` hit-testing for seamless dragging and Aero Snap under 125%-150% Windows display scaling.
 
 ### 🖤 Antigravity Native Obsidian Design
 - Precision UI adhering 1:1 to official Antigravity dark obsidian design tokens:
@@ -193,6 +213,8 @@ antigravity-account-switcher/
 │       ├── __main__.py             # Package execution dispatcher
 │       ├── app.py                  # PyQt5 Native Obsidian GUI & WebEngine radar
 │       ├── daemon.py               # Auto-Pilot & CDP auto-resume daemon
+│       ├── mcp_supervisor.py       # MCP matrix health supervisor & stdio self-heal
+│       ├── subagent_tracker.py     # Live Subagent DAG tracer & session telemetry
 │       └── switcher.py             # Win32 Credential Manager hot-swapper & CLI
 ├── main.py                         # Root execution entry point
 ├── pyproject.toml                  # Modern PEP 517/621 packaging configuration
@@ -210,9 +232,13 @@ antigravity-account-switcher/
 ## 🗺️ Roadmap
 
 - [x] **v1.0.0**: Windows 10/11 x64 support, PyQt5 Obsidian GUI, Dual Quota Radar, CDP Auto-Resume, Standalone Executable, GitHub Actions CI/CD.
-- [ ] **v1.1.0**: Cross-platform **macOS Keychain** integration (`/usr/bin/security`) & Apple Silicon M-series DMG bundle.
-- [ ] **v1.2.0**: Linux Secret Service / Keyring integration.
-- [ ] **v1.3.0**: Encrypted cross-device profile export/import.
+- [x] **v1.1.0**: Live Subagent DAG Tracker, MCP Health Matrix & 1-Click Self-Heal, Windows AppUserModelID taskbar binding.
+- [x] **v1.2.0**: Native PyQt5 Window Physics Easing (`QPropertyAnimation`), React Bits Micro-Interactions, 1:1 Antigravity 2.0 Obsidian Dark Header.
+- [x] **v1.2.1**: Auto-Pilot Daemon Lifecycle Hardening, Stale PID Auto-Cleanup, Non-Console Stream Guards, Clean 1:1 Typography.
+- [x] **v1.2.2**: Responsive Single-Line Enforcement (`whitespace-nowrap`), Active Email Ellipsis Truncation, Ergonomic Desktop Geometry (`840x800`).
+- [ ] **v1.3.0**: Cross-platform **macOS Keychain** integration (`/usr/bin/security`) & Apple Silicon M-series DMG bundle.
+- [ ] **v1.4.0**: Linux Secret Service / Keyring integration.
+- [ ] **v1.5.0**: Encrypted cross-device profile export/import.
 
 ---
 
