@@ -17,7 +17,7 @@
 
   <br>
 
-  <img src="assets/screenshots/showcase.png" alt="Antigravity Control Center Interface" width="680">
+  <img src="assets/screenshots/showcase.png" alt="Antigravity Control Center Interface" width="760">
 
 </div>
 
