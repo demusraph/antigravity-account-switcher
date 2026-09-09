@@ -11,7 +11,6 @@
   [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=flat-square&logo=windows&logoColor=white)](https://microsoft.com)
   [![macOS Roadmap](https://img.shields.io/badge/macOS-Planned%20v1.3.0-orange?style=flat-square&logo=apple&logoColor=white)](#-roadmap)
   [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
-  [![Design System](https://img.shields.io/badge/Design%20System-Obsidian%20Dark%20(%23101010)-101010?style=flat-square)](#-antigravity-native-obsidian-design)
   [![Security](https://img.shields.io/badge/Security-Local%20DPAPI%20%7C%20Zero%20Cloud-10B981?style=flat-square)](SECURITY.md)
   [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 
@@ -82,15 +81,7 @@ Rather than forcing developers to manually log out, restart applications, or int
 - **Anti-Wrapping Layout Hardening**: Strict `whitespace-nowrap` and `shrink-0` architecture across all status badges, recommendation actions, Auto-Pilot toggle buttons, and navigation tabs—permanently eliminating awkward multi-line text wrapping on narrow viewports.
 - **Dynamic Active Email Truncation**: Responsive CSS ellipsis truncation (`truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px]`) with interactive hover tooltip displaying full identity.
 - **High-DPI Desktop Geometry**: Default proportions expanded to **`840 x 800`** (minimum `660 x 680`) with fine-tuned Win32 `HTCAPTION` hit-testing for seamless dragging and Aero Snap under 125%-150% Windows display scaling.
-
-### 🖤 Antigravity Native Obsidian Design
-- Precision UI adhering 1:1 to official Antigravity dark obsidian design tokens:
-  - Canvas: `#101010`
-  - Elevated Surfaces: `#191919`
-  - Dividers & Outlines: `#222222` hairline borders
-  - Interactive Accent: `#2B7FFF` Antigravity Electric Blue
-- **Zero-Emoji Discipline**: Professional, clutter-free typography and vector iconography.
-- System Tray integration with silent background minimization (`Hide to Tray`).
+- **System Tray Integration**: Silent background minimization (`Hide to Tray`) with global taskbar tray restore.
 
 ---
 
