@@ -59,7 +59,7 @@ Rather than forcing developers to manually log out, restart applications, or int
 - Deadlock / Unresponsive detection: Flags agents that stall for $>60$ seconds with quick-access session switching across recent conversation IDs.
 
 ### 🔌 MCP Server Matrix & Health Supervisor
-- Auto-discovers local Model Context Protocol servers configured in `~/.gemini/config/mcp_config.json` (`Roblox_Studio`, `Excel_Cowork`, `Google_Slides`, `Blender`, `MS_Project`).
+- Auto-discovers all Model Context Protocol (MCP) servers configured in `~/.gemini/config/mcp_config.json`.
 - Real-time Windows process inspection via `psutil`: PID, RAM RSS (MB), CPU%, and uptime.
 - **1-Click Ping Probe**: Tests stdio JSON-RPC handshake responsiveness (`initialize` probe) with exact latency measurement in milliseconds.
 - **1-Click Server Restart**: Kills zombie processes and resets stdio pipelines to clean standby.

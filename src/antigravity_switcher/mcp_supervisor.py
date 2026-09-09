@@ -28,28 +28,45 @@ def load_mcp_servers():
         print(f"[MCP Supervisor] Error reading config: {e}")
         return {}
 
-def inspect_running_processes():
+def inspect_running_processes(servers=None):
     """
-    Finds running processes associated with configured MCP servers.
+    Dynamically discovers running processes associated with any configured MCP server.
     """
+    if servers is None:
+        servers = load_mcp_servers()
+
     matches = {}
     for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'memory_info', 'create_time']):
         try:
             cmdline_list = proc.info.get('cmdline') or []
+            if not cmdline_list:
+                continue
             cmdline_str = " ".join(cmdline_list).lower()
             pname = (proc.info.get('name') or "").lower()
 
-            # Identify Roblox Studio MCP
-            if "studiomcp" in pname or "studiomcp" in cmdline_str:
-                matches["Roblox_Studio"] = proc
-            elif "excel_mcp_server" in cmdline_str:
-                matches["Excel_Cowork"] = proc
-            elif "google_slides_mcp_server" in cmdline_str:
-                matches["Google_Slides"] = proc
-            elif "msproject_mcp_server" in cmdline_str:
-                matches["MS_Project"] = proc
-            elif "blender-mcp" in cmdline_str or "blender_mcp" in cmdline_str:
-                matches["Blender"] = proc
+            for name, s_cfg in servers.items():
+                if name in matches:
+                    continue
+                cmd = s_cfg.get("command", "")
+                args = [str(a).lower() for a in s_cfg.get("args", [])]
+                
+                # Direct match by server identifier
+                name_clean = name.lower().replace("_", "").replace("-", "")
+                if name.lower() in cmdline_str or (len(name_clean) > 3 and name_clean in cmdline_str):
+                    matches[name] = proc
+                    break
+
+                # Match by script or binary name defined in server configuration
+                matched = False
+                for arg in args:
+                    arg_base = os.path.basename(arg).lower().replace(".py", "").replace(".js", "").replace(".ts", "").replace(".exe", "")
+                    if len(arg_base) > 3 and (arg_base in cmdline_str or arg_base in pname):
+                        matches[name] = proc
+                        matched = True
+                        break
+                if matched:
+                    break
+
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
     return matches
@@ -59,7 +76,7 @@ def get_mcp_matrix():
     Returns a unified matrix of all configured MCP servers and their real-time process state.
     """
     servers = load_mcp_servers()
-    running_procs = inspect_running_processes()
+    running_procs = inspect_running_processes(servers)
     now = time.time()
     result = []
 
