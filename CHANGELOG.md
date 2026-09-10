@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-09-10
+
+### Added
+- **Interactive 2D Top-Down Pixel Game "Agents Office" Headquarters**: Transformed Tab 2 into a high-craft 16-bit retro living simulation where AI agents physically inhabit the 4 architectural wings (Executive Suite, Engineering Bay, Intelligence Lounge, and SecOps Boardroom) on a 640x640 pixel floor plan.
+- **Razor-Sharp Pixel Texture Rendering**: Integrated `/assets/office_floor_pixel.png` with CSS `image-rendering: pixelated; crisp-edges;` to ensure lossless visual fidelity on all display DPI scales.
+- **Custom Pixel Character Sprites**: Vector-crisp pixel SVG character sprites with specialized uniforms and accessories for each department (navy suit & red tie for Executive; purple hoodie & headphones for Engineering; emerald vest & glasses for Intelligence; tactical vest & headset for SecOps).
+- **Dynamic Activity Bubbles & Monitor Screen Glow**: Real-time activity bubbles above agents (`• [tool_name]` typing for working agents, `• Sync` for conference discussions, `☕ Break` for lounge standby, `❗ Blocked` for errors) plus atmospheric screen flicker desk glow.
+- **Interactive Hover HUD & Employee Dossier**: Hovering over any desk character displays an elevated Obsidian tooltip; clicking opens the full Employee Dossier Modal with tool traces and prompt history.
+- **Triple-View Switcher**: Instant 1-click toggling between `[ 🎮 Pixel Office ]`, `[ 🏢 Division Cards ]`, and `[ 🌲 DAG Tree ]` with zoom controls (`Fit`, `100%`) and optional CRT scanlines overlay.
+
+---
+
 ## [1.2.2] - 2026-09-08
 
 ### Fixed

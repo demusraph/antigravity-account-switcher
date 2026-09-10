@@ -112,6 +112,13 @@ possible_icos = [
 ]
 ICON_ICO = next((p for p in possible_icos if os.path.exists(p)), "")
 
+possible_office_pngs = [
+    os.path.join(BUNDLE_DIR, "assets", "office", "office_floor_pixel.png"),
+    os.path.join(APP_DIR, "assets", "office", "office_floor_pixel.png"),
+    os.path.join(_REPO_DIR, "assets", "office", "office_floor_pixel.png"),
+]
+OFFICE_PIXEL_PNG = next((p for p in possible_office_pngs if os.path.exists(p)), "")
+
 # Obfuscated runtime credentials (Google Antigravity public client)
 _K = 0x37
 _ID_B = [6,7,0,6,7,7,1,7,1,7,2,14,6,26,67,90,95,68,68,94,89,5,95,5,6,91,84,69,82,5,4,2,65,67,88,91,88,93,95,3,80,3,7,4,82,71,25,86,71,71,68,25,80,88,88,80,91,82,66,68,82,69,84,88,89,67,82,89,67,25,84,88,90]
@@ -703,6 +710,196 @@ HTML_INTERFACE = """<!DOCTYPE html>
         opacity: 1;
       }
     }
+
+    /* Pixel Office Game Simulator & Retro HUD */
+    .pixel-art-img {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+    .crt-scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
+      background-size: 100% 4px;
+    }
+    .pixel-zone {
+      border: 1px dashed transparent;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    .pixel-zone:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+    .pixel-zone .zone-tag {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 9px;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(13, 13, 17, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #888899;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      pointer-events: none;
+    }
+    .pixel-zone:hover .zone-tag {
+      opacity: 1;
+    }
+    #zone-exec:hover {
+      box-shadow: inset 0 0 25px rgba(59, 130, 246, 0.08);
+    }
+    #zone-eng:hover {
+      box-shadow: inset 0 0 25px rgba(139, 92, 246, 0.08);
+    }
+    #zone-intel:hover {
+      box-shadow: inset 0 0 25px rgba(16, 185, 129, 0.08);
+    }
+    #zone-sec:hover {
+      box-shadow: inset 0 0 25px rgba(245, 158, 11, 0.08);
+    }
+    
+    .pixel-agent {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      z-index: 25;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      outline: none;
+    }
+    .pixel-agent:hover {
+      transform: translate(-50%, -54%) scale(1.1);
+      z-index: 50;
+      filter: brightness(1.15);
+    }
+    .pixel-agent:focus-visible {
+      outline: 2px solid #3b82f6;
+    }
+    .pixel-shadow {
+      width: 20px;
+      height: 5px;
+      background: rgba(0, 0, 0, 0.65);
+      border-radius: 50%;
+      margin: -3px auto 0 auto;
+      filter: blur(0.6px);
+    }
+    .pixel-monitor-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -85%);
+      width: 24px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.5) 0%, rgba(56, 189, 248, 0) 70%);
+      pointer-events: none;
+      z-index: 15;
+      animation: screenFlicker 2.4s infinite ease-in-out;
+    }
+    @keyframes screenFlicker {
+      0%, 100% { opacity: 0.85; transform: translate(-50%, -85%) scale(1); }
+      40% { opacity: 0.55; transform: translate(-50%, -85%) scale(0.94); }
+      75% { opacity: 1; transform: translate(-50%, -85%) scale(1.06); }
+    }
+    .pixel-bubble {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 3px;
+      background: #121217;
+      border: 1px solid #3b82f6;
+      border-radius: 4px;
+      padding: 1.5px 4.5px;
+      color: #fff;
+      font-size: 8.5px;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      pointer-events: none;
+      animation: bubbleFloat 2.8s ease-in-out infinite alternate;
+    }
+    @keyframes bubbleFloat {
+      0% { transform: translate(-50%, 0); }
+      100% { transform: translate(-50%, -2px); }
+    }
+    .pixel-bubble::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -3px;
+      border-width: 3px;
+      border-style: solid;
+      border-color: #3b82f6 transparent transparent transparent;
+    }
+    .pixel-bubble.working {
+      border-color: #10b981;
+      color: #34d399;
+    }
+    .pixel-bubble.working::after {
+      border-color: #10b981 transparent transparent transparent;
+    }
+    .pixel-bubble.meeting {
+      border-color: #f59e0b;
+      color: #fbbf24;
+    }
+    .pixel-bubble.meeting::after {
+      border-color: #f59e0b transparent transparent transparent;
+    }
+    .pixel-bubble.blocked {
+      border-color: #ef4444;
+      color: #f87171;
+    }
+    .pixel-bubble.blocked::after {
+      border-color: #ef4444 transparent transparent transparent;
+    }
+    .pixel-bubble.standby {
+      border-color: #4b5563;
+      color: #9ca3af;
+    }
+    .pixel-bubble.standby::after {
+      border-color: #4b5563 transparent transparent transparent;
+    }
+    .pixel-bubble-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .pixel-tooltip {
+      position: absolute;
+      bottom: calc(100% + 22px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      width: 220px;
+      background: #141418;
+      border: 1px solid #333344;
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.85), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.16s ease, transform 0.16s ease;
+      z-index: 99;
+    }
+    .pixel-agent:hover .pixel-tooltip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+    .pixel-sprite {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75));
+    }
   </style>
 </head>
 <body class="font-sans antialiased overflow-hidden flex flex-col h-screen select-none bg-canvas text-[#CCCCCC]">
@@ -880,9 +1077,13 @@ HTML_INTERFACE = """<!DOCTYPE html>
           <div class="flex items-center gap-2">
             <!-- View Mode Switcher -->
             <div class="flex items-center bg-surface-2 p-0.5 rounded-lg border border-hairline text-[11px]">
-              <button id="btn-view-office" onclick="setOfficeView('office')" class="px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40">
+              <button id="btn-view-pixel" onclick="setOfficeView('pixel')" class="px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40">
+                <i data-lucide="gamepad-2" class="w-3 h-3"></i>
+                <span>Pixel Office</span>
+              </button>
+              <button id="btn-view-office" onclick="setOfficeView('office')" class="px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent">
                 <i data-lucide="layout-grid" class="w-3 h-3"></i>
-                <span>Office Floor</span>
+                <span>Division Cards</span>
               </button>
               <button id="btn-view-dag" onclick="setOfficeView('dag')" class="px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent">
                 <i data-lucide="git-branch" class="w-3 h-3"></i>
@@ -904,8 +1105,86 @@ HTML_INTERFACE = """<!DOCTYPE html>
         <!-- Rendered via JS -->
       </div>
 
-      <!-- View 1: Office Floor (Department Grid) -->
-      <div id="office-floor-view" class="space-y-4">
+      <!-- View 1: Pixel Office Simulation (Default) -->
+      <div id="pixel-office-view" class="space-y-3">
+        <!-- Pixel Controls Bar -->
+        <div class="flex items-center justify-between px-3 py-2 bg-surface rounded-lg border border-hairline text-[11px]">
+          <!-- Department Counts -->
+          <div class="flex items-center gap-2 overflow-x-auto">
+            <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">Wings:</span>
+            <div class="flex items-center gap-1.5">
+              <span id="pixel-count-exec" class="px-2 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/60 text-blue-300 font-mono flex items-center gap-1">
+                <i data-lucide="briefcase" class="w-3 h-3 text-blue-400"></i> Exec <b class="text-white">1</b>
+              </span>
+              <span id="pixel-count-eng" class="px-2 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/60 text-purple-300 font-mono flex items-center gap-1">
+                <i data-lucide="code-2" class="w-3 h-3 text-purple-400"></i> Eng <b class="text-white" id="pixel-val-eng">0/6</b>
+              </span>
+              <span id="pixel-count-intel" class="px-2 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 font-mono flex items-center gap-1">
+                <i data-lucide="flask-conical" class="w-3 h-3 text-emerald-400"></i> Intel <b class="text-white" id="pixel-val-intel">0/5</b>
+              </span>
+              <span id="pixel-count-sec" class="px-2 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/60 text-amber-300 font-mono flex items-center gap-1">
+                <i data-lucide="shield-check" class="w-3 h-3 text-amber-400"></i> SecOps <b class="text-white" id="pixel-val-sec">0/8</b>
+              </span>
+            </div>
+          </div>
+
+          <!-- Stage Zoom & Filter Tools -->
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="togglePixelScanlines()" id="btn-pixel-scanlines" title="Toggle CRT Scanline Effect" class="px-2 py-0.5 rounded text-[10px] font-mono border border-hairline bg-surface-2 hover:bg-surface-3 text-gray-400 hover:text-white transition-all flex items-center gap-1">
+              <span>CRT</span>
+            </button>
+            <div class="h-3 w-px bg-hairline mx-0.5"></div>
+            <button onclick="setPixelStageScale('fit')" id="btn-scale-fit" class="px-2 py-0.5 rounded text-[10px] font-mono border border-accent/40 bg-accent/20 text-accent transition-all">Fit</button>
+            <button onclick="setPixelStageScale('100')" id="btn-scale-100" class="px-2 py-0.5 rounded text-[10px] font-mono border border-hairline bg-surface-2 hover:bg-surface-3 text-gray-400 hover:text-white transition-all">100%</button>
+          </div>
+        </div>
+
+        <!-- Master Pixel Canvas Viewport -->
+        <div id="pixel-viewport-container" class="relative w-full overflow-hidden flex items-center justify-center p-2 rounded-xl bg-[#09090b] border border-hairline shadow-2xl">
+          <div id="pixel-stage" class="relative rounded-lg overflow-hidden border border-hairline/60 bg-[#0d0d11] transition-all duration-200" style="width: 100%; max-width: 640px; aspect-ratio: 1/1;">
+            
+            <!-- Floor Map Base Layer (Pixelated Crisp) -->
+            <img src="/assets/office_floor_pixel.png" alt="Agents Virtual Office Map" class="w-full h-full object-cover select-none pointer-events-none pixel-art-img" />
+
+            <!-- Room Boundary Ambient Hover Overlays -->
+            <div id="zone-exec" class="pixel-zone absolute cursor-pointer" style="top: 1.5%; left: 1.5%; width: 45%; height: 45%;" title="Executive Suite & Strategy (Room 401)">
+              <div class="zone-tag">Executive Suite</div>
+            </div>
+            <div id="zone-eng" class="pixel-zone absolute cursor-pointer" style="top: 1.5%; right: 1.5%; width: 48%; height: 48%;" title="Engineering & Construction Bay (Bay 204)">
+              <div class="zone-tag">Engineering Bay</div>
+            </div>
+            <div id="zone-intel" class="pixel-zone absolute cursor-pointer" style="bottom: 1.5%; left: 1.5%; width: 45%; height: 48%;" title="R&D & Intelligence Lab (Lab 302)">
+              <div class="zone-tag">Intelligence Lounge</div>
+            </div>
+            <div id="zone-sec" class="pixel-zone absolute cursor-pointer" style="bottom: 1.5%; right: 1.5%; width: 48%; height: 48%;" title="SecOps & QA Boardroom (Floor 105)">
+              <div class="zone-tag">SecOps Boardroom</div>
+            </div>
+
+            <!-- Optional CRT Scanlines Layer -->
+            <div id="pixel-scanlines-layer" class="absolute inset-0 pointer-events-none hidden crt-scanlines opacity-25"></div>
+
+            <!-- Dynamic Agents & Interactive Layer -->
+            <div id="pixel-agents-layer" class="absolute inset-0 pointer-events-auto">
+              <!-- Dynamically populated via renderPixelOffice -->
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Bottom Office Activity Legend & Tip -->
+        <div class="flex items-center justify-between px-2 text-[10.5px] text-gray-500 font-mono">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Focus</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Sync</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-surface-3 border border-hairline"></span> Standby</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400"></span> Blocked</span>
+          </div>
+          <span class="text-gray-400">Click any agent to open Employee Dossier</span>
+        </div>
+      </div>
+
+      <!-- View 2: Office Floor (Department Grid) -->
+      <div id="office-floor-view" class="hidden space-y-4">
         <div id="office-departments-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           <!-- Rendered via JS: Executive, Intelligence, Engineering, SecOps -->
         </div>
@@ -1161,8 +1440,48 @@ HTML_INTERFACE = """<!DOCTYPE html>
       }
     }
 
-    let currentOfficeViewMode = 'office';
+    let currentOfficeViewMode = 'pixel';
     let officeStaffRegistry = [];
+
+    const OFFICE_SLOTS = {
+      executive: [
+        { x: 25.8, y: 15.8, dir: 'down', name: 'Executive Suite • High-Back Desk Chair' },
+        { x: 17.8, y: 33.0, dir: 'up', name: 'Executive Suite • Guest Armchair West' },
+        { x: 33.8, y: 33.0, dir: 'up', name: 'Executive Suite • Guest Armchair East' },
+        { x: 12.5, y: 26.0, dir: 'right', name: 'Executive Suite • Leather Lounge Sofa' }
+      ],
+      engineering: [
+        { x: 59.0, y: 19.8, dir: 'up', name: 'Engineering Bay • Wall Battlestation Alpha' },
+        { x: 70.2, y: 19.8, dir: 'up', name: 'Engineering Bay • Wall Battlestation Beta' },
+        { x: 79.0, y: 32.2, dir: 'down', name: 'Engineering Bay • Pod North Terminal 1' },
+        { x: 89.5, y: 32.2, dir: 'down', name: 'Engineering Bay • Pod North Terminal 2' },
+        { x: 79.0, y: 49.0, dir: 'up', name: 'Engineering Bay • Pod South Terminal 3' },
+        { x: 89.5, y: 49.0, dir: 'up', name: 'Engineering Bay • Pod South Terminal 4' }
+      ],
+      intelligence: [
+        { x: 17.5, y: 69.5, dir: 'up', name: 'Intelligence Lounge • Espresso Bar & Recon Counter' },
+        { x: 17.2, y: 54.0, dir: 'right', name: 'Intelligence Lounge • Reading Pouf North' },
+        { x: 25.0, y: 54.0, dir: 'left', name: 'Intelligence Lounge • Reading Pouf South' },
+        { x: 15.5, y: 76.5, dir: 'up', name: 'Intelligence Lounge • Study Table West' },
+        { x: 24.5, y: 76.5, dir: 'up', name: 'Intelligence Lounge • Study Table East' }
+      ],
+      secops: [
+        { x: 79.2, y: 70.8, dir: 'down', name: 'SecOps Boardroom • Chair 12 (Chief Auditor)' },
+        { x: 86.5, y: 73.5, dir: 'down-left', name: 'SecOps Boardroom • Seat 1.5' },
+        { x: 89.8, y: 81.2, dir: 'left', name: 'SecOps Boardroom • Seat 3' },
+        { x: 86.5, y: 88.5, dir: 'up-left', name: 'SecOps Boardroom • Seat 4.5' },
+        { x: 79.2, y: 91.5, dir: 'up', name: 'SecOps Boardroom • Seat 6' },
+        { x: 71.8, y: 88.5, dir: 'up-right', name: 'SecOps Boardroom • Seat 7.5' },
+        { x: 68.8, y: 81.2, dir: 'right', name: 'SecOps Boardroom • Seat 9' },
+        { x: 71.8, y: 73.5, dir: 'down-right', name: 'SecOps Boardroom • Seat 10.5' }
+      ],
+      overflow: [
+        { x: 50.0, y: 53.0, dir: 'down', name: 'Central Marble Foyer • Rotunda Center' },
+        { x: 44.0, y: 53.0, dir: 'right', name: 'Central Marble Foyer • West Archway' },
+        { x: 56.0, y: 53.0, dir: 'left', name: 'Central Marble Foyer • East Archway' },
+        { x: 50.0, y: 44.0, dir: 'down', name: 'Central Marble Foyer • North Corridor' }
+      ]
+    };
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -1174,31 +1493,298 @@ HTML_INTERFACE = """<!DOCTYPE html>
         .replace(/'/g, '&#039;');
     }
 
+    function getPixelCharacterSvg(deptKey, deskStatus, isParent, dir) {
+      let hairTop = '#1e293b', hairMain = '#0f172a';
+      let skinColor = '#fcd34d';
+      let suitColor = '#1e3a8a';
+      let pantsColor = '#1e293b';
+      let shoesColor = '#000000';
+      let extraHead = '';
+      let extraChest = '';
+
+      if (deptKey === 'executive') {
+        hairTop = '#1e293b';
+        hairMain = '#0f172a';
+        skinColor = '#fcd34d';
+        suitColor = '#1e3a8a';
+        pantsColor = '#1e293b';
+        shoesColor = '#09090b';
+        extraChest = '<rect x="7.5" y="8" width="1" height="3" fill="#ef4444"/>';
+      } else if (deptKey === 'engineering') {
+        hairTop = '#7c3aed';
+        hairMain = '#6d28d9';
+        skinColor = '#fbcfe8';
+        suitColor = '#7c3aed';
+        pantsColor = '#3f3f46';
+        shoesColor = '#a855f7';
+        extraHead = `
+          <rect x="3" y="3" width="1" height="3" fill="#38bdf8"/>
+          <rect x="12" y="3" width="1" height="3" fill="#38bdf8"/>
+          <rect x="4" y="1" width="8" height="1" fill="#0284c7"/>
+        `;
+        extraChest = `
+          <rect x="7" y="7" width="2" height="3" fill="#a78bfa"/>
+          <rect x="6" y="8" width="1" height="2" fill="#38bdf8"/>
+          <rect x="9" y="8" width="1" height="2" fill="#38bdf8"/>
+        `;
+      } else if (deptKey === 'intelligence') {
+        hairTop = '#475569';
+        hairMain = '#334155';
+        skinColor = '#fde047';
+        suitColor = '#059669';
+        pantsColor = '#334155';
+        shoesColor = '#78350f';
+        extraHead = `
+          <rect x="5" y="4" width="3" height="2" fill="none" stroke="#38bdf8" stroke-width="0.7"/>
+          <rect x="8" y="4" width="3" height="2" fill="none" stroke="#38bdf8" stroke-width="0.7"/>
+        `;
+        extraChest = `
+          <rect x="6" y="7" width="4" height="4" fill="#fef08a"/>
+          <rect x="9" y="8" width="1" height="2" fill="#fbbf24"/>
+        `;
+      } else if (deptKey === 'secops') {
+        hairTop = '#18181b';
+        hairMain = '#27272a';
+        skinColor = '#f5d0a9';
+        suitColor = '#27272a';
+        pantsColor = '#18181b';
+        shoesColor = '#09090b';
+        extraHead = `
+          <rect x="3" y="3" width="1" height="2" fill="#eab308"/>
+          <rect x="4" y="5" width="2" height="1" fill="#eab308"/>
+        `;
+        extraChest = `
+          <rect x="6" y="7" width="4" height="5" fill="#d97706"/>
+          <rect x="9" y="8" width="1.5" height="1.5" fill="#fbbf24"/>
+        `;
+      }
+
+      let handsY = deskStatus === 'WORKING' ? 10 : 9;
+
+      return `
+        <svg class="pixel-sprite" width="30" height="34" viewBox="0 0 16 18" shape-rendering="crispEdges">
+          <rect x="5" y="1" width="6" height="2" fill="${hairTop}"/>
+          <rect x="4" y="2" width="8" height="2" fill="${hairMain}"/>
+          <rect x="4" y="3" width="1.5" height="3" fill="${hairMain}"/>
+          <rect x="10.5" y="3" width="1.5" height="3" fill="${hairMain}"/>
+          ${extraHead}
+          <rect x="5" y="3" width="6" height="4" fill="${skinColor}"/>
+          <rect x="6" y="4" width="1" height="1" fill="#0f172a"/>
+          <rect x="9" y="4" width="1" height="1" fill="#0f172a"/>
+          <rect x="4" y="7" width="8" height="5" fill="${suitColor}"/>
+          ${extraChest}
+          <rect x="3" y="${handsY}" width="2" height="2" fill="${skinColor}"/>
+          <rect x="11" y="${handsY}" width="2" height="2" fill="${skinColor}"/>
+          <rect x="5" y="12" width="6" height="4" fill="${pantsColor}"/>
+          <rect x="4" y="16" width="3" height="1.5" fill="${shoesColor}"/>
+          <rect x="9" y="16" width="3" height="1.5" fill="${shoesColor}"/>
+        </svg>
+      `;
+    }
+
+    function togglePixelScanlines() {
+      const layer = document.getElementById('pixel-scanlines-layer');
+      const btn = document.getElementById('btn-pixel-scanlines');
+      if (!layer) return;
+      const isHidden = layer.classList.contains('hidden');
+      if (isHidden) {
+        layer.classList.remove('hidden');
+        if (btn) btn.className = 'px-2 py-0.5 rounded text-[10px] font-mono border border-accent/60 bg-accent/20 text-accent transition-all flex items-center gap-1';
+      } else {
+        layer.classList.add('hidden');
+        if (btn) btn.className = 'px-2 py-0.5 rounded text-[10px] font-mono border border-hairline bg-surface-2 hover:bg-surface-3 text-gray-400 hover:text-white transition-all flex items-center gap-1';
+      }
+    }
+
+    function setPixelStageScale(mode) {
+      const stage = document.getElementById('pixel-stage');
+      const btnFit = document.getElementById('btn-scale-fit');
+      const btn100 = document.getElementById('btn-scale-100');
+      if (!stage) return;
+      if (mode === 'fit') {
+        stage.style.maxWidth = '640px';
+        stage.style.width = '100%';
+        if (btnFit) btnFit.className = 'px-2 py-0.5 rounded text-[10px] font-mono border border-accent/40 bg-accent/20 text-accent transition-all';
+        if (btn100) btn100.className = 'px-2 py-0.5 rounded text-[10px] font-mono border border-hairline bg-surface-2 hover:bg-surface-3 text-gray-400 hover:text-white transition-all';
+      } else {
+        stage.style.maxWidth = '640px';
+        stage.style.width = '640px';
+        if (btnFit) btnFit.className = 'px-2 py-0.5 rounded text-[10px] font-mono border border-hairline bg-surface-2 hover:bg-surface-3 text-gray-400 hover:text-white transition-all';
+        if (btn100) btn100.className = 'px-2 py-0.5 rounded text-[10px] font-mono border border-accent/40 bg-accent/20 text-accent transition-all';
+      }
+    }
+
+    function renderPixelOffice(data) {
+      const agentsLayer = document.getElementById('pixel-agents-layer');
+      if (!agentsLayer) return;
+      agentsLayer.innerHTML = '';
+
+      const depts = data.departments || {};
+      const deptKeys = ['executive', 'intelligence', 'engineering', 'secops'];
+
+      // Update HUD count badges
+      const execCount = (depts.executive && depts.executive.staff) ? depts.executive.staff.length : 0;
+      const engCount = (depts.engineering && depts.engineering.staff) ? depts.engineering.staff.length : 0;
+      const intelCount = (depts.intelligence && depts.intelligence.staff) ? depts.intelligence.staff.length : 0;
+      const secCount = (depts.secops && depts.secops.staff) ? depts.secops.staff.length : 0;
+
+      const elEng = document.getElementById('pixel-val-eng');
+      if (elEng) elEng.textContent = `${engCount}/6`;
+      const elIntel = document.getElementById('pixel-val-intel');
+      if (elIntel) elIntel.textContent = `${intelCount}/5`;
+      const elSec = document.getElementById('pixel-val-sec');
+      if (elSec) elSec.textContent = `${secCount}/8`;
+
+      let overflowIdx = 0;
+
+      deptKeys.forEach(deptKey => {
+        const dept = depts[deptKey] || {};
+        const staffList = dept.staff || [];
+        const slots = OFFICE_SLOTS[deptKey] || [];
+
+        staffList.forEach((staff, sIdx) => {
+          let slot = slots[sIdx];
+          if (!slot) {
+            slot = OFFICE_SLOTS.overflow[overflowIdx % OFFICE_SLOTS.overflow.length];
+            overflowIdx++;
+          }
+
+          const agentEl = document.createElement('div');
+          agentEl.className = 'pixel-agent';
+          agentEl.style.left = `${slot.x}%`;
+          agentEl.style.top = `${slot.y}%`;
+          agentEl.tabIndex = 0;
+
+          // Wire click to employee dossier
+          const rIdx = staff._registryIdx !== undefined ? staff._registryIdx : 0;
+          agentEl.onclick = (e) => {
+            e.stopPropagation();
+            openEmployeeDossier(rIdx);
+          };
+
+          // Monitor screen glow on desk when active
+          let glowHtml = '';
+          if (staff.desk_status === 'WORKING') {
+            glowHtml = '<div class="pixel-monitor-glow"></div>';
+          }
+
+          // Dynamic speech bubble
+          let bubbleHtml = '';
+          if (staff.desk_status === 'WORKING') {
+            let toolText = 'Focus';
+            if (staff.active_tool && staff.active_tool.name) {
+              toolText = `[${escapeHtml(staff.active_tool.name)}]`;
+            }
+            bubbleHtml = `
+              <div class="pixel-bubble working">
+                <span class="pixel-bubble-dot animate-pulse"></span>
+                <span class="truncate max-w-[85px]">${toolText}</span>
+              </div>
+            `;
+          } else if (staff.desk_status === 'IN_MEETING') {
+            bubbleHtml = `
+              <div class="pixel-bubble meeting">
+                <span class="pixel-bubble-dot"></span>
+                <span>Sync</span>
+              </div>
+            `;
+          } else if (staff.desk_status === 'BLOCKED') {
+            bubbleHtml = `
+              <div class="pixel-bubble blocked animate-bounce">
+                <span class="pixel-bubble-dot"></span>
+                <span>Blocked</span>
+              </div>
+            `;
+          } else {
+            bubbleHtml = `
+              <div class="pixel-bubble standby">
+                <span>☕ Break</span>
+              </div>
+            `;
+          }
+
+          // Tooltip HUD card
+          const tooltipHtml = `
+            <div class="pixel-tooltip text-left font-sans">
+              <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-hairline/60">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="w-2 h-2 rounded-full ${staff.desk_status === 'WORKING' ? 'bg-emerald-400 animate-pulse' : (staff.desk_status === 'IN_MEETING' ? 'bg-amber-400' : 'bg-gray-400')}"></span>
+                  <span class="text-xs font-bold text-white truncate">${escapeHtml(staff.role)}</span>
+                </div>
+                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-2 border border-hairline text-gray-300 shrink-0">
+                  ${escapeHtml(dept.name ? dept.name.split(' ')[0] : deptKey.toUpperCase())}
+                </span>
+              </div>
+
+              <div class="py-1.5 space-y-1 text-[10px] font-mono text-gray-400">
+                <div class="flex justify-between">
+                  <span class="text-gray-500">Model:</span>
+                  <span class="text-gray-300 truncate max-w-[120px]">${escapeHtml(staff.model || 'inherit')}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-500">Telemetry:</span>
+                  <span class="text-gray-300">Step ${staff.steps_count || 1} • ${staff.desk_status}</span>
+                </div>
+                ${staff.active_tool ? `
+                  <div class="pt-1 text-[9.5px] text-emerald-400/90 truncate bg-emerald-950/40 p-1 rounded border border-emerald-800/40">
+                    <span class="font-bold">Tool:</span> ${escapeHtml(staff.active_tool.name)} (${escapeHtml(staff.active_tool.summary || '')})
+                  </div>
+                ` : (staff.prompt ? `
+                  <div class="pt-1 text-[9.5px] text-gray-400 italic truncate">
+                    "${escapeHtml(staff.prompt)}"
+                  </div>
+                ` : '')}
+              </div>
+
+              <div class="pt-1 border-t border-hairline/40 flex items-center justify-between text-[9px] font-mono text-accent">
+                <span class="truncate max-w-[110px] text-gray-500">${escapeHtml(slot.name)}</span>
+                <span class="hover:underline flex items-center gap-0.5 shrink-0">Dossier &rarr;</span>
+              </div>
+            </div>
+          `;
+
+          const spriteSvg = getPixelCharacterSvg(deptKey, staff.desk_status, staff.is_parent, slot.dir);
+
+          agentEl.innerHTML = `
+            ${glowHtml}
+            ${bubbleHtml}
+            ${tooltipHtml}
+            ${spriteSvg}
+            <div class="pixel-shadow"></div>
+          `;
+
+          agentsLayer.appendChild(agentEl);
+        });
+      });
+    }
+
     function setOfficeView(mode) {
       currentOfficeViewMode = mode;
+      const btnPixel = document.getElementById('btn-view-pixel');
       const btnOffice = document.getElementById('btn-view-office');
       const btnDag = document.getElementById('btn-view-dag');
+      const pixelView = document.getElementById('pixel-office-view');
       const floorView = document.getElementById('office-floor-view');
       const dagView = document.getElementById('dag-tree-view');
 
-      if (mode === 'office') {
-        if (btnOffice) {
-          btnOffice.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40';
-        }
-        if (btnDag) {
-          btnDag.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent';
-        }
-        if (floorView) floorView.classList.remove('hidden');
-        if (dagView) dagView.classList.add('hidden');
-      } else {
-        if (btnOffice) {
-          btnOffice.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent';
-        }
-        if (btnDag) {
-          btnDag.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40';
-        }
-        if (floorView) floorView.classList.add('hidden');
-        if (dagView) dagView.classList.remove('hidden');
+      const activeClass = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40';
+      const inactiveClass = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent';
+
+      if (btnPixel) btnPixel.className = mode === 'pixel' ? activeClass : inactiveClass;
+      if (btnOffice) btnOffice.className = mode === 'office' ? activeClass : inactiveClass;
+      if (btnDag) btnDag.className = mode === 'dag' ? activeClass : inactiveClass;
+
+      if (pixelView) {
+        if (mode === 'pixel') pixelView.classList.remove('hidden');
+        else pixelView.classList.add('hidden');
+      }
+      if (floorView) {
+        if (mode === 'office') floorView.classList.remove('hidden');
+        else floorView.classList.add('hidden');
+      }
+      if (dagView) {
+        if (mode === 'dag') dagView.classList.remove('hidden');
+        else dagView.classList.add('hidden');
       }
       lucide.createIcons();
       initSpotlightCards();
@@ -1313,6 +1899,19 @@ HTML_INTERFACE = """<!DOCTYPE html>
       const kpis = data.office_kpis || {};
       currentSelectedCid = s.id;
       officeStaffRegistry = [];
+      const deptKeys = ['executive', 'intelligence', 'engineering', 'secops'];
+      const depts = data.departments || {};
+
+      deptKeys.forEach(dKey => {
+        const staffList = (depts[dKey] && depts[dKey].staff) ? depts[dKey].staff : [];
+        staffList.forEach(st => {
+          officeStaffRegistry.push(st);
+          st._registryIdx = officeStaffRegistry.length - 1;
+        });
+      });
+
+      // Render Pixel Game Office Simulation
+      renderPixelOffice(data);
 
       // Pulse dot in tab button
       const pulseDot = document.getElementById('subagents-pulse-dot');
@@ -1434,8 +2033,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
           let desksHtml = '<div class="space-y-2 flex-1">';
           if (staffList.length > 0) {
             staffList.forEach(staff => {
-              officeStaffRegistry.push(staff);
-              const staffIdx = officeStaffRegistry.length - 1;
+              const staffIdx = staff._registryIdx !== undefined ? staff._registryIdx : 0;
 
               let deskBadge = '';
               if (staff.desk_status === 'WORKING') {
@@ -1574,6 +2172,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
         }
       }
 
+      setOfficeView(currentOfficeViewMode);
       lucide.createIcons();
       initSpotlightCards();
     }
@@ -2132,11 +2731,15 @@ HTML_INTERFACE = """<!DOCTYPE html>
     if (initialCid) {
       currentSelectedCid = initialCid;
     }
-    if (initialView && ['office', 'dag'].includes(initialView)) {
+    if (initialView && ['pixel', 'office', 'dag'].includes(initialView)) {
       currentOfficeViewMode = initialView;
     }
     if (initialTab && ['accounts', 'subagents', 'mcp', 'logs', 'manage'].includes(initialTab)) {
       setTab(initialTab);
+    }
+    const initialDossier = urlParams.get('dossier');
+    if (initialDossier !== null && !isNaN(parseInt(initialDossier))) {
+      setTimeout(() => openEmployeeDossier(parseInt(initialDossier)), 400);
     }
     // Auto-poll status every 15 seconds
     setInterval(fetchStatus, 15000);
@@ -2211,6 +2814,21 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                 png_bytes = open(ICON_PNG, "rb").read()
                 self.send_response(200)
                 self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(png_bytes)))
+                self.end_headers()
+                self.wfile.write(png_bytes)
+            else:
+                self.send_response(404)
+                self.end_headers()
+        elif self.path in ["/assets/office_floor_pixel.png", "/office_floor_pixel.png"] or self.path.startswith("/assets/office_floor_pixel.png"):
+            target_path = OFFICE_PIXEL_PNG
+            if not target_path or not os.path.exists(target_path):
+                target_path = next((p for p in possible_office_pngs if os.path.exists(p)), "")
+            if target_path and os.path.exists(target_path):
+                png_bytes = open(target_path, "rb").read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Cache-Control", "public, max-age=3600")
                 self.send_header("Content-Length", str(len(png_bytes)))
                 self.end_headers()
                 self.wfile.write(png_bytes)
