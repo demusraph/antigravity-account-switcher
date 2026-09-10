@@ -846,8 +846,9 @@ HTML_INTERFACE = """<!DOCTYPE html>
   <nav class="flex border-b border-hairline px-4 gap-4 sm:gap-5 text-xs shrink-0 bg-surface-2/40 overflow-x-auto whitespace-nowrap select-none">
     <div role="button" onclick="setTab('accounts')" id="tab-accounts" class="py-2.5 font-medium border-b-2 border-accent text-white transition-all cursor-pointer whitespace-nowrap shrink-0">Accounts</div>
     <div role="button" onclick="setTab('subagents')" id="tab-subagents" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0">
-      <span class="whitespace-nowrap">Subagent DAG</span>
-      <span id="subagents-pulse-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 hidden shrink-0"></span>
+      <i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i>
+      <span class="whitespace-nowrap">Agents Office</span>
+      <span id="subagents-pulse-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 hidden shrink-0 animate-pulse"></span>
     </div>
     <div role="button" onclick="setTab('mcp')" id="tab-mcp" class="py-2.5 font-medium border-b-2 border-transparent text-[#6E6E6E] hover:text-[#CCCCCC] transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0">
       <span class="whitespace-nowrap">MCP Matrix</span>
@@ -867,28 +868,51 @@ HTML_INTERFACE = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Tab: Subagents DAG -->
+    <!-- Tab 2: Agents Office & DAG -->
     <div id="view-subagents" class="hidden space-y-4">
-      <!-- Session Switcher Pills -->
-      <div class="space-y-1.5">
+      <!-- Session Switcher & View Switcher Bar -->
+      <div class="space-y-2">
         <div class="flex items-center justify-between text-[11px] text-gray-400">
-          <span>Recent Sessions</span>
-          <button onclick="fetchSubagents()" class="hover:text-white flex items-center gap-1 transition-colors">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
-          </button>
+          <div class="flex items-center gap-1.5 text-gray-300 font-medium">
+            <i data-lucide="building-2" class="w-3.5 h-3.5 text-accent"></i>
+            <span>Office Switchboard & Sessions</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- View Mode Switcher -->
+            <div class="flex items-center bg-surface-2 p-0.5 rounded-lg border border-hairline text-[11px]">
+              <button id="btn-view-office" onclick="setOfficeView('office')" class="px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40">
+                <i data-lucide="layout-grid" class="w-3 h-3"></i>
+                <span>Office Floor</span>
+              </button>
+              <button id="btn-view-dag" onclick="setOfficeView('dag')" class="px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent">
+                <i data-lucide="git-branch" class="w-3 h-3"></i>
+                <span>DAG Tree</span>
+              </button>
+            </div>
+            <button onclick="fetchSubagents(currentSelectedCid)" title="Refresh Telemetry" class="hover:text-white p-1 rounded hover:bg-surface-2 flex items-center gap-1 transition-colors text-[11px]">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            </button>
+          </div>
         </div>
         <div id="session-pills" class="flex gap-2 overflow-x-auto pb-1 font-mono text-[11px]">
           <!-- Rendered via JS -->
         </div>
       </div>
 
-      <!-- Active Session Status Card -->
-      <div id="subagent-active-card" class="border border-hairline rounded-lg bg-surface p-4 space-y-3">
+      <!-- Headquarters Summary Bar -->
+      <div id="office-hq-bar" class="border border-hairline rounded-lg bg-surface p-3.5 space-y-3">
         <!-- Rendered via JS -->
       </div>
 
-      <!-- DAG Tree Container -->
-      <div class="border border-hairline rounded-lg bg-surface p-4 space-y-3">
+      <!-- View 1: Office Floor (Department Grid) -->
+      <div id="office-floor-view" class="space-y-4">
+        <div id="office-departments-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <!-- Rendered via JS: Executive, Intelligence, Engineering, SecOps -->
+        </div>
+      </div>
+
+      <!-- View 2: Classic DAG Tree -->
+      <div id="dag-tree-view" class="hidden border border-hairline rounded-lg bg-surface p-4 space-y-3">
         <div class="flex items-center justify-between border-b border-hairline pb-2.5">
           <div class="flex items-center gap-2">
             <i data-lucide="git-branch" class="w-4 h-4 text-accent"></i>
@@ -972,6 +996,34 @@ HTML_INTERFACE = """<!DOCTYPE html>
     </div>
 
   </main>
+
+  <!-- Employee Dossier Modal -->
+  <div id="employee-dossier-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#141414] border border-hairline-strong rounded-xl max-w-lg w-full p-5 space-y-4 shadow-2xl relative max-h-[85vh] flex flex-col">
+      <div class="flex items-start justify-between border-b border-hairline pb-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="dossier-avatar" class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"></div>
+          <div class="min-w-0">
+            <h3 id="dossier-role" class="text-sm font-semibold text-white truncate"></h3>
+            <p id="dossier-sub" class="text-[11px] font-mono text-gray-400 truncate"></p>
+          </div>
+        </div>
+        <button onclick="closeEmployeeDossier()" class="text-gray-400 hover:text-white p-1 rounded hover:bg-surface-2 transition-colors shrink-0">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="dossier-content" class="space-y-3 text-xs overflow-y-auto pr-1 flex-1">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div class="border-t border-hairline pt-3 flex justify-end">
+        <button onclick="closeEmployeeDossier()" class="px-3.5 py-1.5 bg-surface-2 hover:bg-surface-3 border border-hairline text-gray-300 rounded text-xs transition-colors">
+          Close Dossier
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
     /* __INITIAL_STATE_PLACEHOLDER__ */
@@ -1083,6 +1135,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
       if (mcpPollingTimer) clearInterval(mcpPollingTimer);
 
       if (tab === 'subagents') {
+        setOfficeView(currentOfficeViewMode);
         fetchSubagents(currentSelectedCid);
         subagentsPollingTimer = setInterval(() => {
           if (currentTab === 'subagents') fetchSubagents(currentSelectedCid);
@@ -1108,15 +1161,163 @@ HTML_INTERFACE = """<!DOCTYPE html>
       }
     }
 
+    let currentOfficeViewMode = 'office';
+    let officeStaffRegistry = [];
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function setOfficeView(mode) {
+      currentOfficeViewMode = mode;
+      const btnOffice = document.getElementById('btn-view-office');
+      const btnDag = document.getElementById('btn-view-dag');
+      const floorView = document.getElementById('office-floor-view');
+      const dagView = document.getElementById('dag-tree-view');
+
+      if (mode === 'office') {
+        if (btnOffice) {
+          btnOffice.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40';
+        }
+        if (btnDag) {
+          btnDag.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent';
+        }
+        if (floorView) floorView.classList.remove('hidden');
+        if (dagView) dagView.classList.add('hidden');
+      } else {
+        if (btnOffice) {
+          btnOffice.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 text-gray-400 hover:text-white border border-transparent';
+        }
+        if (btnDag) {
+          btnDag.className = 'px-2.5 py-1 rounded font-medium transition-all flex items-center gap-1.5 bg-accent/20 text-accent border border-accent/40';
+        }
+        if (floorView) floorView.classList.add('hidden');
+        if (dagView) dagView.classList.remove('hidden');
+      }
+      lucide.createIcons();
+      initSpotlightCards();
+    }
+
+    function openEmployeeDossier(index) {
+      const staff = officeStaffRegistry[index];
+      if (!staff) return;
+
+      const avatarEl = document.getElementById('dossier-avatar');
+      const roleEl = document.getElementById('dossier-role');
+      const subEl = document.getElementById('dossier-sub');
+      const bodyEl = document.getElementById('dossier-content');
+      const modal = document.getElementById('employee-dossier-modal');
+
+      if (roleEl) roleEl.textContent = staff.role || 'AI Employee';
+      if (subEl) subEl.textContent = `Department: ${(staff.department || 'General').toUpperCase()} | Model: ${staff.model || 'inherit'} | Step: ${staff.steps_count || 1}`;
+
+      if (avatarEl) {
+        let avatarBg = 'bg-accent/20 text-accent border border-accent/40';
+        if (staff.department === 'intelligence') avatarBg = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+        else if (staff.department === 'engineering') avatarBg = 'bg-purple-500/20 text-purple-400 border border-purple-500/40';
+        else if (staff.department === 'secops') avatarBg = 'bg-amber-500/20 text-amber-400 border border-amber-500/40';
+        avatarEl.className = `w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${avatarBg}`;
+        avatarEl.innerHTML = `<i data-lucide="${staff.is_parent ? 'cpu' : 'bot'}" class="w-4 h-4"></i>`;
+      }
+
+      if (bodyEl) {
+        let statusBadge = '';
+        if (staff.desk_status === 'WORKING') {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center gap-1.5 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> IN DEEP FOCUS (WORKING)</span>`;
+        } else if (staff.desk_status === 'IN_MEETING') {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-amber-950/60 border border-amber-800 text-amber-400 font-medium">IN SYNC MEETING</span>`;
+        } else if (staff.desk_status === 'BLOCKED') {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-red-950/60 border border-red-800 text-red-400 font-bold">DESK OBSTACLE / BLOCKED</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-surface-2 border border-hairline text-gray-400 font-mono">ON STANDBY / FINISHED</span>`;
+        }
+
+        let toolBlock = '';
+        if (staff.active_tool) {
+          toolBlock = `
+            <div class="space-y-1">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Active Desk Tool / Execution</div>
+              <div class="bg-surface-2 border border-hairline rounded p-2.5 font-mono text-[11px] space-y-1">
+                <div class="text-accent font-semibold flex items-center gap-1.5">
+                  <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
+                  <span>${escapeHtml(staff.active_tool.name)}</span>
+                </div>
+                ${staff.active_tool.action ? `<div class="text-gray-300">${escapeHtml(staff.active_tool.action)}</div>` : ''}
+                ${staff.active_tool.summary ? `<div class="text-gray-400 text-[10px]">${escapeHtml(staff.active_tool.summary)}</div>` : ''}
+              </div>
+            </div>
+          `;
+        }
+
+        bodyEl.innerHTML = `
+          <div class="flex items-center justify-between pb-2 border-b border-hairline/60">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Live Desk Status</span>
+            ${statusBadge}
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center font-mono text-[11px]">
+            <div class="bg-surface-2/60 border border-hairline rounded p-2">
+              <div class="text-[10px] text-gray-500 uppercase">Steps</div>
+              <div class="text-white font-semibold text-xs">${staff.steps_count || 1}</div>
+            </div>
+            <div class="bg-surface-2/60 border border-hairline rounded p-2">
+              <div class="text-[10px] text-gray-500 uppercase">Tokens</div>
+              <div class="text-accent font-semibold text-xs">${(staff.tokens_count || 0).toLocaleString()}</div>
+            </div>
+            <div class="bg-surface-2/60 border border-hairline rounded p-2">
+              <div class="text-[10px] text-gray-500 uppercase">Last Active</div>
+              <div class="text-gray-300 font-semibold text-xs">${staff.last_active || 'Recent'}</div>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Assigned Mission / Directive</div>
+            <div class="bg-surface-2 border border-hairline rounded p-2.5 font-mono text-[11px] text-gray-200 leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto select-text">${escapeHtml(staff.full_prompt || staff.prompt || 'Direct Orchestration Loop')}</div>
+          </div>
+
+          ${toolBlock}
+
+          <div class="pt-1 text-[10px] font-mono text-gray-500">
+            <span>Identity CID: <code>${escapeHtml(staff.conversation_id || staff.id || 'root')}</code></span>
+          </div>
+        `;
+      }
+
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.onclick = (e) => {
+          if (e.target === modal) closeEmployeeDossier();
+        };
+      }
+      lucide.createIcons();
+    }
+
+    function closeEmployeeDossier() {
+      const modal = document.getElementById('employee-dossier-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeEmployeeDossier();
+    });
+
     function renderSubagents(data) {
       if (!data || !data.active_session) return;
       const s = data.active_session;
+      const kpis = data.office_kpis || {};
       currentSelectedCid = s.id;
+      officeStaffRegistry = [];
 
-      // Pulse dot in tab
+      // Pulse dot in tab button
       const pulseDot = document.getElementById('subagents-pulse-dot');
       if (pulseDot) {
-        if (s.status === 'RUNNING') pulseDot.classList.remove('hidden');
+        if (s.status === 'RUNNING' || kpis.active_workers > 0) pulseDot.classList.remove('hidden');
         else pulseDot.classList.add('hidden');
       }
 
@@ -1138,65 +1339,172 @@ HTML_INTERFACE = """<!DOCTYPE html>
         });
       }
 
-      // Render Active Session Card
-      let statusBadge = '';
-      if (s.status === 'RUNNING') {
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center gap-1.5 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> RUNNING</span>`;
-      } else if (s.status === 'STUCK') {
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-red-950/60 border border-red-800 text-red-400 flex items-center gap-1.5 font-bold"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> STUCK (>60s)</span>`;
-      } else if (s.status === 'WAITING') {
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950/60 border border-amber-800 text-amber-400 font-medium">WAITING</span>`;
-      } else {
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-surface-2 border border-hairline text-gray-400 font-mono">IDLE</span>`;
-      }
+      // Render Headquarters Overview Bar
+      const hqBar = document.getElementById('office-hq-bar');
+      if (hqBar) {
+        let opBadge = '';
+        if (kpis.office_status === 'FULL OPERATION' || s.status === 'RUNNING') {
+          opBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center gap-1.5 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> FULL OPERATION</span>`;
+        } else if (kpis.office_status === 'IN SYNC' || s.status === 'WAITING') {
+          opBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-amber-950/60 border border-amber-800 text-amber-400 flex items-center gap-1.5 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> IN SYNC</span>`;
+        } else if (s.status === 'STUCK') {
+          opBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-red-950/60 border border-red-800 text-red-400 flex items-center gap-1.5 font-bold"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> BLOCKED</span>`;
+        } else {
+          opBadge = `<span class="px-2.5 py-0.5 rounded text-[10px] bg-surface-2 border border-hairline text-gray-400 font-mono">STANDBY / READY</span>`;
+        }
 
-      let toolHtml = '<span class="text-gray-500 italic">No recent tool call</span>';
-      if (s.last_tool) {
-        toolHtml = `
-          <div class="flex items-center gap-2 bg-surface-2 border border-hairline px-2.5 py-1.5 rounded font-mono text-[11px]">
-            <span class="text-accent font-semibold">${s.last_tool.name}</span>
-            <span class="text-gray-400 truncate">${s.last_tool.summary || s.last_tool.action || ''}</span>
-          </div>
-        `;
-      }
+        const totalTokens = (kpis.total_tokens || s.estimated_tokens || 0).toLocaleString();
+        const activeWorkers = kpis.active_workers || (s.status === 'RUNNING' ? 1 : 0);
+        const totalHeadcount = kpis.total_headcount || (1 + (data.subagents || []).length);
 
-      const activeCard = document.getElementById('subagent-active-card');
-      if (activeCard) {
-        activeCard.innerHTML = `
-          <div class="flex items-start justify-between gap-3">
-            <div class="space-y-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Active Task</span>
-                <span class="text-[11px] font-mono text-gray-500">ID: ${s.id.substring(0, 13)}...</span>
-              </div>
-              <h4 class="text-xs font-semibold text-white truncate">${s.prompt}</h4>
+        hqBar.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Virtual HQ</span>
+              <span class="text-[11px] font-mono text-gray-500 truncate">ID: ${s.id.substring(0, 13)}...</span>
             </div>
-            <div>${statusBadge}</div>
+            <div>${opBadge}</div>
           </div>
 
           <div class="grid grid-cols-3 gap-2 pt-1 border-t border-hairline/60 text-center font-mono text-[11px]">
             <div class="bg-surface-2/60 border border-hairline rounded p-1.5">
-              <div class="text-[10px] text-gray-500 uppercase">Steps</div>
-              <div class="text-white font-semibold">${s.total_steps}</div>
+              <div class="text-[10px] text-gray-500 uppercase">Headcount</div>
+              <div class="text-white font-semibold">${totalHeadcount} Staff <span class="text-emerald-400 font-normal text-[10px]">(${activeWorkers} act)</span></div>
             </div>
             <div class="bg-surface-2/60 border border-hairline rounded p-1.5">
-              <div class="text-[10px] text-gray-500 uppercase">Est. Tokens</div>
-              <div class="text-accent font-semibold">${s.estimated_tokens.toLocaleString()}</div>
+              <div class="text-[10px] text-gray-500 uppercase">Token Burn</div>
+              <div class="text-accent font-semibold">${totalTokens} <span class="text-gray-500 text-[10px]">(${kpis.token_burn_label || 'Normal'})</span></div>
             </div>
             <div class="bg-surface-2/60 border border-hairline rounded p-1.5">
-              <div class="text-[10px] text-gray-500 uppercase">Last Step</div>
-              <div class="text-gray-300 font-semibold">${s.last_active}</div>
+              <div class="text-[10px] text-gray-500 uppercase">Primary Steps</div>
+              <div class="text-gray-300 font-semibold">${s.total_steps} <span class="text-gray-500 text-[10px]">(${s.last_active})</span></div>
             </div>
           </div>
 
-          <div class="space-y-1">
-            <span class="text-[10px] font-mono uppercase tracking-wider text-gray-500">Latest Execution</span>
-            ${toolHtml}
+          <div class="flex items-center gap-2 pt-1.5 border-t border-hairline/60">
+            <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">Mission:</span>
+            <span class="text-xs font-semibold text-white truncate">${escapeHtml(s.prompt)}</span>
           </div>
         `;
       }
 
-      // Render DAG Tree
+      // Render Departments Grid (Office Floor View)
+      const deptGrid = document.getElementById('office-departments-grid');
+      if (deptGrid) {
+        deptGrid.innerHTML = '';
+        const deptKeys = ['executive', 'intelligence', 'engineering', 'secops'];
+        const depts = data.departments || {};
+
+        deptKeys.forEach(dKey => {
+          const dept = depts[dKey] || {
+            name: dKey.toUpperCase(),
+            room: 'Office Wing',
+            badge: 'General',
+            icon: 'building',
+            color: '#2B7FFF',
+            border: 'border-blue-500/30',
+            bg_glow: 'bg-blue-500/10',
+            text: 'text-blue-400',
+            staff: []
+          };
+
+          const staffList = dept.staff || [];
+          const deptCard = document.createElement('div');
+          deptCard.className = `border ${dept.border || 'border-hairline'} rounded-xl bg-surface p-3.5 space-y-3 flex flex-col justify-between`;
+
+          // Department Header
+          let headerHtml = `
+            <div class="flex items-center justify-between pb-2 border-b border-hairline/70">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg ${dept.bg_glow || 'bg-surface-2'} flex items-center justify-center ${dept.text || 'text-accent'}">
+                  <i data-lucide="${dept.icon || 'building'}" class="w-3.5 h-3.5"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-semibold text-white leading-none">${escapeHtml(dept.name)}</h4>
+                  <p class="text-[10px] font-mono text-gray-500 pt-0.5">${escapeHtml(dept.room)}</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-2 border border-hairline text-gray-300">
+                ${staffList.length} ${staffList.length === 1 ? 'Desk' : 'Desks'}
+              </span>
+            </div>
+          `;
+
+          // Staff Desks Container
+          let desksHtml = '<div class="space-y-2 flex-1">';
+          if (staffList.length > 0) {
+            staffList.forEach(staff => {
+              officeStaffRegistry.push(staff);
+              const staffIdx = officeStaffRegistry.length - 1;
+
+              let deskBadge = '';
+              if (staff.desk_status === 'WORKING') {
+                deskBadge = `<span class="px-1.5 py-0.5 rounded text-[9.5px] bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center gap-1 font-medium shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Focus</span>`;
+              } else if (staff.desk_status === 'IN_MEETING') {
+                deskBadge = `<span class="px-1.5 py-0.5 rounded text-[9.5px] bg-amber-950/60 border border-amber-800 text-amber-400 font-medium shrink-0">In Sync</span>`;
+              } else if (staff.desk_status === 'BLOCKED') {
+                deskBadge = `<span class="px-1.5 py-0.5 rounded text-[9.5px] bg-red-950/60 border border-red-800 text-red-400 font-bold shrink-0">Blocked</span>`;
+              } else {
+                deskBadge = `<span class="px-1.5 py-0.5 rounded text-[9.5px] bg-surface-2 border border-hairline text-gray-400 font-mono shrink-0">Standby</span>`;
+              }
+
+              let toolChip = '';
+              if (staff.active_tool) {
+                toolChip = `
+                  <div class="flex items-center gap-1.5 bg-surface-2 border border-hairline/80 px-2 py-1 rounded font-mono text-[10px] text-gray-300 truncate">
+                    <span class="text-accent font-semibold shrink-0">[${escapeHtml(staff.active_tool.name)}]</span>
+                    <span class="truncate text-gray-400">${escapeHtml(staff.active_tool.summary || staff.active_tool.action || '')}</span>
+                  </div>
+                `;
+              } else if (staff.prompt) {
+                toolChip = `
+                  <div class="text-[10.5px] text-gray-400 line-clamp-1 italic font-mono truncate px-1">
+                    "${escapeHtml(staff.prompt)}"
+                  </div>
+                `;
+              }
+
+              desksHtml += `
+                <div onclick="openEmployeeDossier(${staffIdx})" class="spotlight-card border border-hairline rounded-lg bg-surface-2/40 p-2.5 space-y-2 hover:border-gray-600 transition-all cursor-pointer">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <div class="w-6 h-6 rounded ${dept.bg_glow || 'bg-surface-3'} flex items-center justify-center ${dept.text || 'text-white'} text-[11px] font-bold shrink-0">
+                        <i data-lucide="${staff.is_parent ? 'cpu' : 'bot'}" class="w-3.5 h-3.5"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-xs font-semibold text-white truncate">${escapeHtml(staff.role)}</div>
+                        <div class="text-[9.5px] font-mono text-gray-500 truncate">${escapeHtml(staff.model || 'inherit')}</div>
+                      </div>
+                    </div>
+                    ${deskBadge}
+                  </div>
+
+                  ${toolChip}
+
+                  <div class="flex items-center justify-between text-[10px] font-mono text-gray-500 pt-1 border-t border-hairline/40">
+                    <span>Steps: <b class="text-gray-300">${staff.steps_count || 1}</b></span>
+                    <span class="text-accent hover:underline flex items-center gap-0.5">Dossier <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
+                  </div>
+                </div>
+              `;
+            });
+          } else {
+            desksHtml += `
+              <div class="border border-dashed border-hairline/70 rounded-lg p-4 text-center text-gray-500 text-[11px] flex flex-col items-center justify-center gap-1.5 bg-surface-2/20 py-5">
+                <i data-lucide="${dept.icon || 'building'}" class="w-4 h-4 text-gray-600"></i>
+                <span class="text-gray-400 font-medium">Department on Standby</span>
+                <span class="text-[10px] text-gray-600">Specialists mobilize here when spawned</span>
+              </div>
+            `;
+          }
+          desksHtml += '</div>';
+
+          deptCard.innerHTML = headerHtml + desksHtml;
+          deptGrid.appendChild(deptCard);
+        });
+      }
+
+      // Render Classic DAG Tree View
       const subCount = (data.subagents || []).length;
       const countEl = document.getElementById('dag-node-count');
       if (countEl) countEl.textContent = `${1 + subCount} Nodes`;
@@ -1226,7 +1534,7 @@ HTML_INTERFACE = """<!DOCTYPE html>
         // Subagent Nodes
         if (subCount > 0) {
           data.subagents.forEach((sa, idx) => {
-            const isSaRunning = sa.status === 'RUNNING';
+            const isSaRunning = sa.status === 'RUNNING' || sa.desk_status === 'WORKING';
             const branch = document.createElement('div');
             branch.className = 'ml-5 pl-4 border-l-2 border-hairline-strong relative space-y-2';
             branch.innerHTML = `
@@ -1237,18 +1545,18 @@ HTML_INTERFACE = """<!DOCTYPE html>
                       <i data-lucide="bot" class="w-3.5 h-3.5"></i>
                     </div>
                     <div>
-                      <div class="text-xs font-semibold text-white">${sa.role || 'Subagent'}</div>
-                      <div class="text-[10px] font-mono text-gray-500">Type: ${sa.type} | Model: ${sa.model}</div>
+                      <div class="text-xs font-semibold text-white">${escapeHtml(sa.role || 'Subagent')}</div>
+                      <div class="text-[10px] font-mono text-gray-500">Dept: ${escapeHtml((sa.department || 'engineering').toUpperCase())} | Model: ${escapeHtml(sa.model || 'inherit')}</div>
                     </div>
                   </div>
                   <span class="px-2 py-0.5 rounded text-[10px] font-mono ${
                     isSaRunning
                       ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-medium'
                       : 'bg-surface-2 border border-hairline text-gray-400'
-                  }">${sa.status}</span>
+                  }">${sa.desk_status || sa.status}</span>
                 </div>
                 <div class="bg-surface-2/60 border border-hairline/60 rounded p-2 text-[11px] text-gray-300 font-mono leading-relaxed truncate">
-                  "${sa.prompt}"
+                  "${escapeHtml(sa.prompt)}"
                 </div>
               </div>
             `;
@@ -1817,6 +2125,19 @@ HTML_INTERFACE = """<!DOCTYPE html>
     if (state.accounts && state.accounts.length > 0) {
       renderUI();
     }
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab');
+    const initialCid = urlParams.get('cid');
+    const initialView = urlParams.get('view');
+    if (initialCid) {
+      currentSelectedCid = initialCid;
+    }
+    if (initialView && ['office', 'dag'].includes(initialView)) {
+      currentOfficeViewMode = initialView;
+    }
+    if (initialTab && ['accounts', 'subagents', 'mcp', 'logs', 'manage'].includes(initialTab)) {
+      setTab(initialTab);
+    }
     // Auto-poll status every 15 seconds
     setInterval(fetchStatus, 15000);
     fetchStatus();
@@ -1834,7 +2155,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         pass # Silence console logging
 
     def do_GET(self):
-        if self.path == "/" or self.path.startswith("/index.html"):
+        if self.path == "/" or self.path.startswith("/?") or self.path.startswith("/index.html"):
             now = time.time()
             if not LocalApiHandler.cached_status or (now - LocalApiHandler.last_fetch_time > 12):
                 LocalApiHandler.cached_status = self.build_status_payload()
